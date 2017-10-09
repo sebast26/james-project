@@ -45,6 +45,7 @@
         <class>org.apache.james.mailbox.jpa.quota.model.MaxDomainStorage</class>
         <class>org.apache.james.mailbox.jpa.quota.model.MaxDomainMessageCount</class>
         <class>org.apache.james.mailbox.jpa.quota.model.JpaCurrentQuota</class>
+        <class>org.apache.james.mailbox.jpa.mail.model.JPAAttachment</class>
 
         <properties>
             <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>

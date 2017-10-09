@@ -86,7 +86,8 @@ public interface MailboxManager extends RequestAware, MailboxListenerSupport, Ri
     boolean hasCapability(MailboxCapabilities capability);
 
     enum MessageCapabilities {
-        UniqueID
+        UniqueID,
+        Attachment
     }
 
     EnumSet<MessageCapabilities> getSupportedMessageCapabilities();

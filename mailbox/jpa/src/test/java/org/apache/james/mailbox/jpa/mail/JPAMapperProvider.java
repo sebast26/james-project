@@ -29,6 +29,7 @@ import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.mailbox.MessageUid;
 import org.apache.james.mailbox.exception.MailboxException;
 import org.apache.james.mailbox.jpa.JPAId;
+import org.apache.james.mailbox.jpa.ids.JPAMessageId;
 import org.apache.james.mailbox.mock.MockMailboxSession;
 import org.apache.james.mailbox.model.MailboxId;
 import org.apache.james.mailbox.model.MessageId;
@@ -38,7 +39,6 @@ import org.apache.james.mailbox.store.mail.AttachmentMapper;
 import org.apache.james.mailbox.store.mail.MailboxMapper;
 import org.apache.james.mailbox.store.mail.MessageIdMapper;
 import org.apache.james.mailbox.store.mail.MessageMapper;
-import org.apache.james.mailbox.store.mail.model.DefaultMessageId;
 import org.apache.james.mailbox.store.mail.model.Mailbox;
 import org.apache.james.mailbox.store.mail.model.MapperProvider;
 
@@ -62,17 +62,17 @@ public class JPAMapperProvider implements MapperProvider {
         EntityManagerFactory entityManagerFactory = jpaTestCluster.getEntityManagerFactory();
         JVMMailboxPathLocker locker = new JVMMailboxPathLocker();
 
-        JPAMessageMapper messageMapper = new JPAMessageMapper(new MockMailboxSession("benwa"), 
-            new JPAUidProvider(locker, entityManagerFactory), 
-            new JPAModSeqProvider(locker, entityManagerFactory), 
-            entityManagerFactory);
+        JPAMessageMapper messageMapper = new JPAMessageMapper(new MockMailboxSession("benwa"),
+                new JPAUidProvider(locker, entityManagerFactory),
+                new JPAModSeqProvider(locker, entityManagerFactory),
+                entityManagerFactory);
 
         return new TransactionalMessageMapper(messageMapper);
     }
 
     @Override
     public AttachmentMapper createAttachmentMapper() throws MailboxException {
-        throw new NotImplementedException("not implemented");
+        return new TransactionalAttachmentMapper(new JPAAttachmentMapper(jpaTestCluster.getEntityManagerFactory()));
     }
 
     @Override
@@ -87,7 +87,7 @@ public class JPAMapperProvider implements MapperProvider {
 
     @Override
     public MessageId generateMessageId() {
-        return new DefaultMessageId.Factory().generate();
+        return new JPAMessageId.Factory().generate();
     }
 
     @Override
@@ -97,7 +97,7 @@ public class JPAMapperProvider implements MapperProvider {
 
     @Override
     public List<Capabilities> getSupportedCapabilities() {
-        return ImmutableList.of(Capabilities.ANNOTATION, Capabilities.MAILBOX, Capabilities.MESSAGE);
+        return ImmutableList.of(Capabilities.ANNOTATION, Capabilities.MAILBOX, Capabilities.MESSAGE, Capabilities.ATTACHMENT);
     }
 
     @Override

@@ -47,12 +47,18 @@ fi
 git clone $ORIGIN/.
 git checkout $SHA1
 
+echo "Setting MAVEN_OPTS"
+export MAVEN_OPTS="-Xmx1024M -Xss128M -XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:+CMSClassUnloadingEnabled"
+
+export MVN_ADDITIONAL_ARG_LINE="-pl server/data/data-jpa -am -l mvn.log"
+
 # Compilation
 
 if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests ${MVN_ADDITIONAL_ARG_LINE}
 else
-   mvn package ${MVN_ADDITIONAL_ARG_LINE}
+   # mvn package ${MVN_ADDITIONAL_ARG_LINE}
+   mvn test -DfailIfNoTests=false -Dtest=JpaSieveRepositoryTest#setActiveShouldWork ${MVN_ADDITIONAL_ARG_LINE}
 fi
 
 # Retrieve result

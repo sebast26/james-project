@@ -30,12 +30,16 @@
         <class>org.apache.james.user.jpa.model.JPAUser</class>
         <class>org.apache.james.rrt.jpa.model.JPARecipientRewrite</class>
         <class>org.apache.james.mailrepository.jpa.JPAUrl</class>
+        <class>org.apache.james.sieve.jpa.model.JPASieveQuota</class>
+        <class>org.apache.james.sieve.jpa.model.JPASieveScriptId</class>
+        <class>org.apache.james.sieve.jpa.model.JPASieveScript</class>
         <exclude-unlisted-classes>true</exclude-unlisted-classes>
         <properties>
             <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
             <property name="openjpa.jdbc.MappingDefaults" value="ForeignKeyDeleteAction=cascade, JoinForeignKeyDeleteAction=cascade"/>
             <property name="openjpa.jdbc.SchemaFactory" value="native(ForeignKeys=true)"/>
             <property name="openjpa.jdbc.QuerySQLCache" value="false"/>
+            <property name="openjpa.Log" value="DefaultLevel=WARN, Runtime=INFO, Tool=INFO, SQL=TRACE"/>
         </properties>
 
     </persistence-unit>

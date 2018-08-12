@@ -35,7 +35,6 @@ import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.james.core.User;
 import org.apache.james.core.quota.QuotaSize;
 import org.apache.james.sieve.jpa.model.JPASieveQuota;
@@ -51,7 +50,6 @@ import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
 import org.apache.james.sieverepository.api.exception.StorageException;
-import org.apache.openjpa.persistence.InvalidStateException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,9 +129,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public List<ScriptSummary> listScripts(final User user) throws StorageException {
-        List<JPASieveScript> allSieveScripts = findAllSieveScriptsForUser(user);
-        LOGGER.info("AllSieveScripts for user " + user.asString() + " are " + allSieveScripts);
-        return allSieveScripts.stream()
+        return findAllSieveScriptsForUser(user).stream()
                 .map(sieveScript -> new ScriptSummary(new ScriptName(sieveScript.getScriptName()), sieveScript.isActive()))
                 .collect(Collectors.toList());
     }
@@ -143,10 +139,9 @@ public class JPASieveRepository implements SieveRepository {
         try {
             List<JPASieveScript> sieveScripts = entityManager.createNamedQuery("findAllByUsername", JPASieveScript.class)
                     .setParameter("username", user.asString()).getResultList();
-            LOGGER.info("After findAllByUsername " + sieveScripts);
             return sieveScripts != null ? sieveScripts : new ArrayList<>();
         } catch (PersistenceException e) {
-            LOGGER.debug("Failed to list scripts for user " + user.asString(), e);
+            LOGGER.debug("Unable to list scripts for user " + user.asString(), e);
             throw new StorageException("Unable to list scripts for user " + user.asString(), e);
         } finally {
             entityManager.close();
@@ -171,6 +166,9 @@ public class JPASieveRepository implements SieveRepository {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             return findActiveSieveScript(user, entityManager);
+        } catch (PersistenceException e) {
+            LOGGER.debug("Unable to find active script for user " + user.asString(), e);
+            throw new StorageException("Unable to find active script for user " + user.asString(), e);
         } finally {
             entityManager.close();
         }
@@ -184,14 +182,6 @@ public class JPASieveRepository implements SieveRepository {
         } catch (NoResultException e) {
             LOGGER.debug("Unable to find active script for user " + user.asString(), e);
             return Optional.empty();
-        } catch (PersistenceException e) {
-            LOGGER.debug("Unable to get active script for user " + user.asString(), e);
-            throw new StorageException("Unable to get active script for user " + user.asString(), e);
-        } catch (InvalidStateException e) {
-            // TODO: remove
-            LOGGER.error("InvalidStateException thrown ", e.getMessage(), e);
-            LOGGER.info(ExceptionUtils.getStackTrace(e));
-            throw new StorageException();
         }
     }
 
@@ -210,16 +200,14 @@ public class JPASieveRepository implements SieveRepository {
             }
 
             transaction.commit();
+        } catch (SieveRepositoryException e) {
+            rollbackTransactionIfActive(transaction);
+            throw e;
         } catch (PersistenceException e) {
             LOGGER.debug("Unable to set active script " + name.getValue() + " for user " + user.asString(), e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to set active script " + name.getValue() + " for user " + user.asString(), e);
         } finally {
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
             entityManager.close();
         }
     }
@@ -251,6 +239,9 @@ public class JPASieveRepository implements SieveRepository {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             return findSieveScript(user, scriptName, entityManager);
+        } catch (PersistenceException e) {
+            LOGGER.debug("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
+            throw new StorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
         } finally {
             entityManager.close();
         }
@@ -265,9 +256,6 @@ public class JPASieveRepository implements SieveRepository {
         } catch (NoResultException e) {
             LOGGER.debug("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
             return Optional.empty();
-        } catch (PersistenceException e) {
-            LOGGER.debug("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
-            throw new StorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
         }
     }
 

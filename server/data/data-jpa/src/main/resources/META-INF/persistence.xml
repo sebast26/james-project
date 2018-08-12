@@ -39,7 +39,6 @@
             <property name="openjpa.jdbc.MappingDefaults" value="ForeignKeyDeleteAction=cascade, JoinForeignKeyDeleteAction=cascade"/>
             <property name="openjpa.jdbc.SchemaFactory" value="native(ForeignKeys=true)"/>
             <property name="openjpa.jdbc.QuerySQLCache" value="false"/>
-            <property name="openjpa.Log" value="DefaultLevel=WARN, Runtime=INFO, Tool=INFO, SQL=TRACE"/>
         </properties>
 
     </persistence-unit>

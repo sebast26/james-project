@@ -165,7 +165,7 @@
                     <toolProperties>
                         <property>
                             <name>log</name>
-                            <value>TOOL=TRACE, SQL=TRACE</value>
+                            <value>TOOL=TRACE</value>
                         </property>
                         <property>
                             <name>metaDataFactory</name>

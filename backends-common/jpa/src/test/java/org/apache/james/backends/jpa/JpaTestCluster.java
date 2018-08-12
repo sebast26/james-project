@@ -45,8 +45,8 @@ public class JpaTestCluster {
         properties.put("openjpa.jdbc.SchemaFactory", "native(ForeignKeys=true)");
         properties.put("openjpa.jdbc.MappingDefaults", "ForeignKeyDeleteAction=cascade, JoinForeignKeyDeleteAction=cascade");
         properties.put("openjpa.jdbc.QuerySQLCache", "false");
-        properties.put("openjpa.Log", "JDBC=TRACE, SQL=TRACE, Runtime=WARN");
-        properties.put("openjpa.ConnectionFactoryProperties", "PrettyPrint=true, PrettyPrintLineLength=72, PrintParameters=true");
+        properties.put("openjpa.Log", "JDBC=WARN, SQL=WARN, Runtime=WARN");
+        properties.put("openjpa.ConnectionFactoryProperties", "PrettyPrint=true, PrettyPrintLineLength=72");
         properties.put("openjpa.MetaDataFactory", "jpa(Types=" +
                 clazz.stream()
                     .map(Class::getName)

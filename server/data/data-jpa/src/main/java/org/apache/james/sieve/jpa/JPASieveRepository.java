@@ -49,6 +49,7 @@ import org.apache.james.sieverepository.api.exception.IsActiveException;
 import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
+import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 import org.apache.openjpa.persistence.InvalidStateException;
 
@@ -101,27 +102,30 @@ public class JPASieveRepository implements SieveRepository {
     @Override
     public void putScript(final User user, final ScriptName name, final ScriptContent content) throws StorageException, QuotaExceededException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
 
             haveSpace(user, name, content.length());
             JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
-            final JPASieveScript newSieveScript = entityManager.merge(jpaSieveScript);
-            LOGGER.info("New sieve script: " + newSieveScript);
+            entityManager.merge(jpaSieveScript);
+
             transaction.commit();
+        } catch (SieveRepositoryException e) {
+            rollbackTransactionIfActive(transaction);
+            throw e;
         } catch (PersistenceException e) {
-            LOGGER.debug("Failed to put script for user " + user.asString(), e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            LOGGER.debug("Unable to put script for user " + user.asString(), e);
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to put script for user " + user.asString(), e);
         } finally {
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
             entityManager.close();
+        }
+    }
+
+    private void rollbackTransactionIfActive(final EntityTransaction transaction) {
+        if (transaction.isActive()) {
+            transaction.rollback();
         }
     }
 

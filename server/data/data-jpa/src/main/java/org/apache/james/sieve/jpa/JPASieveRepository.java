@@ -81,15 +81,15 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private QuotaSize limitToUse(User user) throws StorageException {
-        try {
-            return getQuota(user);
-        } catch (QuotaNotFoundException e) {
-            LOGGER.debug("User does not have quota - checking default quota");
+        Optional<JPASieveQuota> userQuota = findQuotaForUser(user.asString());
+        if (userQuota.isPresent()) {
+            return QuotaSize.size(userQuota.map(JPASieveQuota::getSize));
         }
 
-        try {
-            return getDefaultQuota();
-        } catch (QuotaNotFoundException e) {
+        Optional<JPASieveQuota> defaultQuota = findQuotaForUser(DEFAULT_SIEVE_QUOTA_USERNAME);
+        if (defaultQuota.isPresent()) {
+            return QuotaSize.size(defaultQuota.map(JPASieveQuota::getSize));
+        } else {
             return QuotaSize.unlimited();
         }
     }

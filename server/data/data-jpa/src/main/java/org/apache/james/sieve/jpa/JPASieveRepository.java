@@ -339,7 +339,6 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void setQuota(final User user, final QuotaSize quota) throws StorageException {
-        // TODO: override?
         setQuotaForUser(user.asString(), quota);
     }
 
@@ -371,9 +370,15 @@ public class JPASieveRepository implements SieveRepository {
 
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
         transactionRunner.runAndThrowOnException(entityManager -> {
-            JPASieveQuota sieveQuota = new JPASieveQuota(username, quota.asLong());
-            //TODO: persist?
-            entityManager.merge(sieveQuota);
+            Optional<JPASieveQuota> sieveQuota = findQuotaForUser(username, entityManager);
+            if (sieveQuota.isPresent()) {
+                JPASieveQuota jpaSieveQuota = sieveQuota.get();
+                jpaSieveQuota.setSize(quota);
+                entityManager.merge(jpaSieveQuota);
+            } else {
+                JPASieveQuota jpaSieveQuota = new JPASieveQuota(username, quota.asLong());
+                entityManager.persist(jpaSieveQuota);
+            }
         }, pe -> new StorageException("Unable to set quota for user " + username, pe));
     }
 

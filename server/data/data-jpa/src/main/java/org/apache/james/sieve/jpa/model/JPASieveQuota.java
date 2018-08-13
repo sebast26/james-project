@@ -28,6 +28,8 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import org.apache.james.core.quota.QuotaSize;
+
 import com.google.common.base.MoreObjects;
 
 @Entity(name = "JamesSieveQuota")
@@ -56,6 +58,10 @@ public class JPASieveQuota {
         return size;
     }
 
+    public void setSize(final QuotaSize quotaSize) {
+        this.size = quotaSize.asLong();
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -65,12 +71,12 @@ public class JPASieveQuota {
             return false;
         }
         final JPASieveQuota that = (JPASieveQuota) o;
-        return size == that.size && Objects.equals(username, that.username);
+        return Objects.equals(username, that.username);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(username, size);
+        return Objects.hash(username);
     }
 
     @Override

@@ -76,4 +76,23 @@ public class TransactionRunner {
         }
     }
 
+    public <E extends Throwable> void runAndThrowOnException(final Consumer<EntityManager> runner,
+                                                             final Function<PersistenceException, E> exceptionTranslator) throws E {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            runner.accept(entityManager);
+            transaction.commit();
+        } catch (PersistenceException e) {
+            LOGGER.warn("Could not execute transaction", e);
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            throw exceptionTranslator.apply(e);
+        } finally {
+            entityManager.close();
+        }
+    }
+
 }

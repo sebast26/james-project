@@ -268,17 +268,21 @@ public class JPASieveRepository implements SieveRepository {
 
         try {
             transaction.begin();
-            JPASieveScript sieveScript = findSieveScript(user, name, entityManager)
-                    .orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString()));
-            if (sieveScript.isActive()) {
+
+            Optional<JPASieveScript> sieveScript = findSieveScript(user, name, entityManager);
+            if (!sieveScript.isPresent()) {
+                rollbackTransactionIfActive(transaction);
+                throw new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString());
+            }
+            JPASieveScript sieveScriptToRemove = sieveScript.get();
+            if (sieveScriptToRemove.isActive()) {
                 LOGGER.debug("Unable to delete active script " + name.getValue() + " for user " + user.asString());
+                rollbackTransactionIfActive(transaction);
                 throw new IsActiveException("Unable to delete active script " + name.getValue() + " for user " + user.asString());
             }
-            entityManager.remove(sieveScript);
+            entityManager.remove(sieveScriptToRemove);
+
             transaction.commit();
-        } catch (SieveRepositoryException e) {
-            rollbackTransactionIfActive(transaction);
-            throw e;
         } catch (PersistenceException e) {
             LOGGER.debug("Unable to delete script " + name.getValue() + " for user " + user.asString(), e);
             rollbackTransactionIfActive(transaction);
@@ -296,7 +300,7 @@ public class JPASieveRepository implements SieveRepository {
         try {
             transaction.begin();
 
-            final Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
+            Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
             if (!sieveScript.isPresent()) {
                 rollbackTransactionIfActive(transaction);
                 throw new ScriptNotFoundException("Unable to find script " + oldName.getValue() + " for user " + user.asString());

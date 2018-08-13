@@ -199,13 +199,13 @@ public class JPASieveRepository implements SieveRepository {
 
     private void switchOffActiveScript(final User user, final EntityManager entityManager) throws StorageException {
         Optional<JPASieveScript> activeSieveScript = findActiveSieveScript(user, entityManager);
-        activeSieveScript.ifPresent(JPASieveScript::deActivate);
+        activeSieveScript.ifPresent(JPASieveScript::deactivate);
     }
 
     private void setActiveScript(final User user, final ScriptName name, final EntityManager entityManager) throws StorageException, ScriptNotFoundException {
         JPASieveScript sieveScript = findSieveScript(user, name, entityManager)
                 .orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString()));
-        findActiveSieveScript(user, entityManager).ifPresent(JPASieveScript::deActivate);
+        findActiveSieveScript(user, entityManager).ifPresent(JPASieveScript::deactivate);
         sieveScript.activate();
     }
 

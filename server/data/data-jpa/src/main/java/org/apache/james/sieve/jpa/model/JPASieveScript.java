@@ -141,7 +141,7 @@ public class JPASieveScript {
         this.activationDateTime = OffsetDateTime.now();
     }
 
-    public void deActivate() {
+    public void deactivate() {
         this.isActive = false;
         this.activationDateTime = null;
     }

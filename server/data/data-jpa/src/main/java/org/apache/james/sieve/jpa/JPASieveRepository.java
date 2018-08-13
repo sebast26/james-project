@@ -25,6 +25,8 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -395,38 +397,30 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-        try {
-            transaction.begin();
-
+        runAndThrowOnError(entityManager -> {
             JPASieveQuota sieveQuota = new JPASieveQuota(username, quota.asLong());
             entityManager.merge(sieveQuota);
-
-            transaction.commit();
-        } catch (PersistenceException e) {
-            LOGGER.debug("Failed to set quota for user " + username, e);
-            rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to set quota for user " + username, e);
-        } finally {
-            entityManager.close();
-        }
+        }, pe -> new StorageException("Unable to set quota for user " + username, pe));
     }
 
     private void removeQuotaForUser(String username) throws StorageException {
+        runAndThrowOnError(entityManager -> {
+            Optional<JPASieveQuota> quotaForUser = findQuotaForUser(username, entityManager);
+            quotaForUser.ifPresent(entityManager::remove);
+        }, pe -> new StorageException("Unable to remove quota for user " + username, pe));
+    }
+
+    private <E extends Throwable> void runAndThrowOnError(final Consumer<EntityManager> runner, final Function<PersistenceException, E> exceptionTranslator) throws E {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
-
-            Optional<JPASieveQuota> quotaForUser = findQuotaForUser(username, entityManager);
-            quotaForUser.ifPresent(entityManager::remove);
-
+            runner.accept(entityManager);
             transaction.commit();
         } catch (PersistenceException e) {
-            LOGGER.debug("Failed to remove quota for user " + username, e);
+            LOGGER.warn("Could not execute transaction", e);
             rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to remove quota for user " + username, e);
+            throw exceptionTranslator.apply(e);
         } finally {
             entityManager.close();
         }

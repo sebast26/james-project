@@ -104,8 +104,7 @@ public class JPASieveRepository implements SieveRepository {
 
             haveSpace(user, name, content.length());
             JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
-            // TODO: persist?
-            entityManager.merge(jpaSieveScript);
+            entityManager.persist(jpaSieveScript);
 
             transaction.commit();
         } catch (SieveRepositoryException e) {

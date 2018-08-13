@@ -65,13 +65,6 @@ public class JPASieveScript {
             this.scriptName = scriptName;
         }
 
-        public Builder scriptContent(String scriptContent) {
-            Preconditions.checkNotNull(scriptContent);
-            this.scriptContent = scriptContent;
-            this.scriptSize = scriptContent.length();
-            return this;
-        }
-
         public Builder scriptContent(ScriptContent scriptContent) {
             Preconditions.checkNotNull(scriptContent);
             this.scriptContent = scriptContent.getValue();

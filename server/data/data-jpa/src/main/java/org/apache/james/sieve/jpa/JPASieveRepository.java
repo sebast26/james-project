@@ -249,7 +249,7 @@ public class JPASieveRepository implements SieveRepository {
         }
     }
 
-    private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName, final EntityManager entityManager) throws StorageException {
+    private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName, final EntityManager entityManager) {
         try {
             JPASieveScript sieveScript = entityManager.createNamedQuery("findSieveScript", JPASieveScript.class)
                     .setParameter("username", user.asString())
@@ -276,16 +276,14 @@ public class JPASieveRepository implements SieveRepository {
             }
             entityManager.remove(sieveScript);
             transaction.commit();
+        } catch (SieveRepositoryException e) {
+            rollbackTransactionIfActive(transaction);
+            throw e;
         } catch (PersistenceException e) {
             LOGGER.debug("Unable to delete script " + name.getValue() + " for user " + user.asString(), e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to delete script " + name.getValue() + " for user " + user.asString());
         } finally {
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
             entityManager.close();
         }
     }
@@ -312,17 +310,14 @@ public class JPASieveRepository implements SieveRepository {
             entityManager.merge(renamedSieveScript);
 
             transaction.commit();
+        } catch (SieveRepositoryException e) {
+            rollbackTransactionIfActive(transaction);
+            throw e;
         } catch (PersistenceException e) {
             LOGGER.debug("Unable to rename script " + oldName.getValue() + " for user " + user.asString(), e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to rename script " + oldName.getValue() + " for user " + user.asString());
         } finally {
-            // TODO: refactor
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
             entityManager.close();
         }
     }

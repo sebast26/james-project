@@ -21,10 +21,11 @@ package org.apache.james.sieve.jpa.model;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
@@ -37,9 +38,9 @@ import com.google.common.base.Preconditions;
 @Entity(name = "JamesSieveScript")
 @Table(name = "JAMES_SIEVE_SCRIPT")
 @NamedQueries({
-        @NamedQuery(name = "findAllByUsername", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.id.username=:username"),
-        @NamedQuery(name = "findActiveByUsername", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.id.username=:username AND sieveScript.isActive=true"),
-        @NamedQuery(name = "findSieveScript", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.id.username=:username AND sieveScript.id.scriptName=:scriptName")
+        @NamedQuery(name = "findAllByUsername", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.username=:username"),
+        @NamedQuery(name = "findActiveByUsername", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.username=:username AND sieveScript.isActive=true"),
+        @NamedQuery(name = "findSieveScript", query = "SELECT sieveScript FROM JamesSieveScript sieveScript WHERE sieveScript.username=:username AND sieveScript.scriptName=:scriptName")
 })
 public class JPASieveScript {
 
@@ -57,6 +58,8 @@ public class JPASieveScript {
         private OffsetDateTime activationDateTime;
 
         public Builder(String username, String scriptName) {
+            Preconditions.checkNotNull(username);
+            Preconditions.checkNotNull(scriptName);
             this.username = username;
             this.scriptName = scriptName;
         }
@@ -77,7 +80,7 @@ public class JPASieveScript {
 
         public Builder isActive(boolean isActive) {
             this.isActive = isActive;
-            this.activationDateTime = OffsetDateTime.now();
+            this.activationDateTime = isActive ? OffsetDateTime.now() : null;
             return this;
         }
 
@@ -86,8 +89,14 @@ public class JPASieveScript {
         }
     }
 
-    @EmbeddedId
-    private JPASieveScriptId id;
+    @Id
+    private String uuid = UUID.randomUUID().toString();
+
+    @Column(name = "USER_NAME", nullable = false, length = 100)
+    private String username;
+
+    @Column(name = "SCRIPT_NAME", nullable = false, length = 255)
+    private String scriptName;
 
     @Column(name = "SCRIPT_CONTENT", nullable = false, length = 1024)
     private String scriptContent;
@@ -105,7 +114,8 @@ public class JPASieveScript {
     }
 
     private JPASieveScript(Builder builder) {
-        this.id = new JPASieveScriptId(builder.username, builder.scriptName);
+        this.username = builder.username;
+        this.scriptName = builder.scriptName;
         this.scriptContent = builder.scriptContent;
         this.scriptSize = builder.scriptSize;
         this.isActive = builder.isActive;
@@ -113,11 +123,11 @@ public class JPASieveScript {
     }
 
     public String getUsername() {
-        return id.getUsername();
+        return username;
     }
 
     public String getScriptName() {
-        return id.getScriptName();
+        return scriptName;
     }
 
     public String getScriptContent() {
@@ -155,22 +165,20 @@ public class JPASieveScript {
             return false;
         }
         final JPASieveScript that = (JPASieveScript) o;
-        return scriptSize == that.scriptSize &&
-                isActive == that.isActive &&
-                Objects.equals(id, that.id) &&
-                Objects.equals(scriptContent, that.scriptContent);
+        return Objects.equals(uuid, that.uuid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, scriptContent, scriptSize, isActive);
+        return Objects.hash(uuid);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("username", id.getUsername())
-                .add("scriptName", id.getScriptName())
+                .add("uuid", uuid)
+                .add("username", username)
+                .add("scriptName", scriptName)
                 .add("isActive", isActive)
                 .toString();
     }

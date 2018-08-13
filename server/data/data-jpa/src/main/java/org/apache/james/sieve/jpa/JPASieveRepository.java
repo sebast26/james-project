@@ -104,6 +104,7 @@ public class JPASieveRepository implements SieveRepository {
 
             haveSpace(user, name, content.length());
             JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
+            // TODO: persist?
             entityManager.merge(jpaSieveScript);
 
             transaction.commit();
@@ -291,6 +292,7 @@ public class JPASieveRepository implements SieveRepository {
                     .scriptContent(oldSieveScript.getScriptContent())
                     .isActive(oldSieveScript.isActive())
                     .build();
+            // TODO: persist?
             entityManager.merge(newSieveScript);
             transaction.commit();
         } catch (PersistenceException e) {
@@ -345,6 +347,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void setQuota(final User user, final QuotaSize quota) throws StorageException {
+        // TODO: override?
         setQuotaForUser(user.asString(), quota);
     }
 
@@ -377,6 +380,7 @@ public class JPASieveRepository implements SieveRepository {
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
         transactionRunner.runAndThrowOnException(entityManager -> {
             JPASieveQuota sieveQuota = new JPASieveQuota(username, quota.asLong());
+            //TODO: persist?
             entityManager.merge(sieveQuota);
         }, pe -> new StorageException("Unable to set quota for user " + username, pe));
     }

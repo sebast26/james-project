@@ -22,7 +22,6 @@ package org.apache.james.sieve.jpa;
 import org.apache.james.backends.jpa.JpaTestCluster;
 import org.apache.james.sieve.jpa.model.JPASieveQuota;
 import org.apache.james.sieve.jpa.model.JPASieveScript;
-import org.apache.james.sieve.jpa.model.JPASieveScriptId;
 import org.apache.james.sieverepository.api.SieveRepository;
 import org.apache.james.sieverepository.lib.AbstractSieveRepositoryTest;
 
@@ -31,7 +30,7 @@ import org.junit.Before;
 
 public class JpaSieveRepositoryTest extends AbstractSieveRepositoryTest {
 
-    private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPASieveScriptId.class, JPASieveScript.class, JPASieveQuota.class);
+    private static final JpaTestCluster JPA_TEST_CLUSTER = JpaTestCluster.create(JPASieveScript.class, JPASieveQuota.class);
 
     @Override
     @Before

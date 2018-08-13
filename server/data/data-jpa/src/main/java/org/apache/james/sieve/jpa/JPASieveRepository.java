@@ -296,23 +296,28 @@ public class JPASieveRepository implements SieveRepository {
         try {
             transaction.begin();
 
-            JPASieveScript sieveScript = findSieveScript(user, oldName, entityManager)
-                    .orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + oldName.getValue() + " for user " + user.asString()));
+            final Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
+            if (!sieveScript.isPresent()) {
+                rollbackTransactionIfActive(transaction);
+                throw new ScriptNotFoundException("Unable to find script " + oldName.getValue() + " for user " + user.asString());
+            }
+
             Optional<JPASieveScript> duplicatedSieveScript = findSieveScript(user, newName, entityManager);
             if (duplicatedSieveScript.isPresent()) {
+                rollbackTransactionIfActive(transaction);
                 throw new DuplicateException("Unable to rename script. Duplicate found " + newName.getValue() + " for user " + user.asString());
             }
 
             // TODO: change mapping?
-            entityManager.remove(sieveScript);
-            JPASieveScript renamedSieveScript = JPASieveScript.builder(user.asString(), newName.getValue()).scriptContent(sieveScript.getScriptContent())
-                    .isActive(sieveScript.isActive()).build();
-            entityManager.merge(renamedSieveScript);
+            JPASieveScript oldSieveScript = sieveScript.get();
+            entityManager.remove(oldSieveScript);
+            JPASieveScript newSieveScript = JPASieveScript.builder(user.asString(), newName.getValue())
+                    .scriptContent(oldSieveScript.getScriptContent())
+                    .isActive(oldSieveScript.isActive())
+                    .build();
+            entityManager.merge(newSieveScript);
 
             transaction.commit();
-        } catch (SieveRepositoryException e) {
-            rollbackTransactionIfActive(transaction);
-            throw e;
         } catch (PersistenceException e) {
             LOGGER.debug("Unable to rename script " + oldName.getValue() + " for user " + user.asString(), e);
             rollbackTransactionIfActive(transaction);

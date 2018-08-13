@@ -285,15 +285,8 @@ public class JPASieveRepository implements SieveRepository {
                 throw new DuplicateException("Unable to rename script. Duplicate found " + newName.getValue() + " for user " + user.asString());
             }
 
-            // TODO: change mapping?
-            JPASieveScript oldSieveScript = sieveScript.get();
-            entityManager.remove(oldSieveScript);
-            JPASieveScript newSieveScript = JPASieveScript.builder(user.asString(), newName.getValue())
-                    .scriptContent(oldSieveScript.getScriptContent())
-                    .isActive(oldSieveScript.isActive())
-                    .build();
-            // TODO: persist?
-            entityManager.merge(newSieveScript);
+            JPASieveScript sieveScriptToRename = sieveScript.get();
+            sieveScriptToRename.renameTo(newName);
             transaction.commit();
         } catch (PersistenceException e) {
             rollbackTransactionIfActive(transaction);

@@ -31,6 +31,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
 import org.apache.james.sieverepository.api.ScriptContent;
+import org.apache.james.sieverepository.api.ScriptName;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
@@ -154,6 +155,10 @@ public class JPASieveScript {
     public void deactivate() {
         this.isActive = false;
         this.activationDateTime = null;
+    }
+
+    public void renameTo(final ScriptName newName) {
+        this.scriptName = newName.getValue();
     }
 
     @Override

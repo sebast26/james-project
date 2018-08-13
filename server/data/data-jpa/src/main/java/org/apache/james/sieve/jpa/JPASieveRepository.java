@@ -180,13 +180,11 @@ public class JPASieveRepository implements SieveRepository {
 
         try {
             transaction.begin();
-
             if (SieveRepository.NO_SCRIPT_NAME.equals(name)) {
-                switchOffActiveScript(user, name, entityManager);
+                switchOffActiveScript(user, entityManager);
             } else {
                 setActiveScript(user, name, entityManager);
             }
-
             transaction.commit();
         } catch (SieveRepositoryException e) {
             rollbackTransactionIfActive(transaction);
@@ -199,7 +197,7 @@ public class JPASieveRepository implements SieveRepository {
         }
     }
 
-    private void switchOffActiveScript(final User user, final ScriptName name, final EntityManager entityManager) throws StorageException {
+    private void switchOffActiveScript(final User user, final EntityManager entityManager) throws StorageException {
         Optional<JPASieveScript> activeSieveScript = findActiveSieveScript(user, entityManager);
         activeSieveScript.ifPresent(JPASieveScript::deActivate);
     }
@@ -207,12 +205,8 @@ public class JPASieveRepository implements SieveRepository {
     private void setActiveScript(final User user, final ScriptName name, final EntityManager entityManager) throws StorageException, ScriptNotFoundException {
         JPASieveScript sieveScript = findSieveScript(user, name, entityManager)
                 .orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString()));
-        // TODO: optioanl
-        JPASieveScript activeSieveScript = findActiveSieveScript(user, entityManager).orElse(null);
+        findActiveSieveScript(user, entityManager).ifPresent(JPASieveScript::deActivate);
         sieveScript.activate();
-        if (activeSieveScript != null) {
-            activeSieveScript.deActivate();
-        }
     }
 
     @Override
@@ -251,7 +245,6 @@ public class JPASieveRepository implements SieveRepository {
 
         try {
             transaction.begin();
-
             Optional<JPASieveScript> sieveScript = findSieveScript(user, name, entityManager);
             if (!sieveScript.isPresent()) {
                 rollbackTransactionIfActive(transaction);
@@ -263,7 +256,6 @@ public class JPASieveRepository implements SieveRepository {
                 throw new IsActiveException("Unable to delete active script " + name.getValue() + " for user " + user.asString());
             }
             entityManager.remove(sieveScriptToRemove);
-
             transaction.commit();
         } catch (PersistenceException e) {
             rollbackTransactionIfActive(transaction);
@@ -280,7 +272,6 @@ public class JPASieveRepository implements SieveRepository {
 
         try {
             transaction.begin();
-
             Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
             if (!sieveScript.isPresent()) {
                 rollbackTransactionIfActive(transaction);
@@ -301,7 +292,6 @@ public class JPASieveRepository implements SieveRepository {
                     .isActive(oldSieveScript.isActive())
                     .build();
             entityManager.merge(newSieveScript);
-
             transaction.commit();
         } catch (PersistenceException e) {
             rollbackTransactionIfActive(transaction);

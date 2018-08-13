@@ -375,12 +375,15 @@ public class JPASieveRepository implements SieveRepository {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         try {
             return findQuotaForUser(username, entityManager);
+        } catch (PersistenceException e) {
+            LOGGER.debug("Unable to find quota for user " + username, e);
+            throw new StorageException("Unable to find quota for user " + username, e);
         } finally {
             entityManager.close();
         }
     }
 
-    private Optional<JPASieveQuota> findQuotaForUser(final String username, final EntityManager entityManager) throws StorageException {
+    private Optional<JPASieveQuota> findQuotaForUser(final String username, final EntityManager entityManager) {
         try {
             JPASieveQuota sieveQuota = entityManager.createNamedQuery("findByUsername", JPASieveQuota.class)
                     .setParameter("username", username).getSingleResult();
@@ -388,15 +391,11 @@ public class JPASieveRepository implements SieveRepository {
         } catch (NoResultException e) {
             LOGGER.debug("Unable to find quota for user " + username);
             return Optional.empty();
-        } catch (PersistenceException e) {
-            LOGGER.debug("Unable to find quota for user " + username, e);
-            throw new StorageException("Unable to find quota for user " + username, e);
         }
     }
 
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
@@ -407,9 +406,7 @@ public class JPASieveRepository implements SieveRepository {
             transaction.commit();
         } catch (PersistenceException e) {
             LOGGER.debug("Failed to set quota for user " + username, e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to set quota for user " + username, e);
         } finally {
             entityManager.close();
@@ -418,7 +415,6 @@ public class JPASieveRepository implements SieveRepository {
 
     private void removeQuotaForUser(String username) throws StorageException {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
-
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
@@ -429,15 +425,9 @@ public class JPASieveRepository implements SieveRepository {
             transaction.commit();
         } catch (PersistenceException e) {
             LOGGER.debug("Failed to remove quota for user " + username, e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
+            rollbackTransactionIfActive(transaction);
             throw new StorageException("Unable to remove quota for user " + username, e);
         } finally {
-            // TODO? inside try/catch there can be StorageException thrown that is not handled on catch block
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
             entityManager.close();
         }
     }

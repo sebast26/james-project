@@ -224,14 +224,14 @@ public class CompletableFutureUtilTest {
             .containsOnly(value1, value2, value3);
     }
 
-//    @Test
-//    public void allOfShouldWorkOnVeryLargeStream() {
-//        CompletableFutureUtil.allOf(
-//            IntStream.range(0, 100000)
-//                .boxed()
-//                .map(CompletableFuture::completedFuture))
-//            .join();
-//    }
+    @Test
+    public void allOfShouldWorkOnVeryLargeStream() {
+        CompletableFutureUtil.allOf(
+            IntStream.range(0, 100000)
+                .boxed()
+                .map(CompletableFuture::completedFuture))
+            .join();
+    }
 
     @Test
     public void mapShouldMapOnStreamInsideACompletableFuturOfStream() {

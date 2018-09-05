@@ -20,7 +20,7 @@
 package org.apache.james.jmap.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +57,6 @@ public class SystemMailboxesProviderImplTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void getMailboxByRoleShouldReturnEmptyWhenNoMailbox() throws Exception {
         when(mailboxManager.getMailbox(eq(MailboxFixture.INBOX_ALICE), eq(mailboxSession))).thenThrow(MailboxNotFoundException.class);
 

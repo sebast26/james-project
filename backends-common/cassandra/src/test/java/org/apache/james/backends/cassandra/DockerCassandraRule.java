@@ -23,111 +23,46 @@ import org.apache.james.util.Host;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.output.OutputFrame;
-import org.testcontainers.images.builder.ImageFromDockerfile;
-import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
-
-import com.github.dockerjava.api.DockerClient;
 
 
 public class DockerCassandraRule implements TestRule {
 
-    private static final Logger logger = LoggerFactory.getLogger(DockerCassandraRule.class);
-
-    private static final int CASSANDRA_PORT = 9042;
-    private static final String CASSANDRA_CONFIG_DIR = "$CASSANDRA_CONFIG";
-    private static final String CASSANDRA_YAML = CASSANDRA_CONFIG_DIR + "/cassandra.yaml";
-    private static final String CASSANDRA_ENV = CASSANDRA_CONFIG_DIR + "/cassandra-env.sh";
-    private static final String JVM_OPTIONS = CASSANDRA_CONFIG_DIR + "/jvm.options";
-
-    private final GenericContainer<?> cassandraContainer;
-    private final DockerClient client;
-
-    @SuppressWarnings("resource")
-    public DockerCassandraRule() {
-        client = DockerClientFactory.instance().client();
-        boolean deleteOnExit = false;
-        cassandraContainer = new GenericContainer<>(
-            new ImageFromDockerfile("cassandra_2_2_12", deleteOnExit)
-                .withDockerfileFromBuilder(builder ->
-                    builder
-                        .from("cassandra:2.2.12")
-                        .env("ENV CASSANDRA_CONFIG", "/etc/cassandra")
-                        //avoiding token range computation helps starting faster
-                        .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.initial_token=0\\\"\" >> " + CASSANDRA_ENV)
-                        .run("sed -i -e \"s/num_tokens/\\#num_tokens/\" " + CASSANDRA_YAML)
-                        //don't wait for other nodes communication to happen
-                        .run("echo \"JVM_OPTS=\\\"\\$JVM_OPTS -Dcassandra.skip_wait_for_gossip_to_settle=0\\\"\" >> " + CASSANDRA_ENV)
-                        //make sure commit log disk flush won't happen
-                        .run("sed -i -e \"s/commitlog_sync_period_in_ms: 10000/commitlog_sync_period_in_ms: 9999999/\" " + CASSANDRA_YAML)
-                        //auto_bootstrap should be useless when no existing data
-                        .run("echo auto_bootstrap: false >> " + CASSANDRA_YAML)
-                        .run("echo \"-Xms1500M\" >> " + JVM_OPTIONS)
-                        .run("echo \"-Xmx1500M\" >> " + JVM_OPTIONS)
-                        // disable assertions (modest performance benefit)
-                        .run("sed -i -e 's/JVM_OPTS=\"$JVM_OPTS -ea\"/JVM_OPTS=\"$JVM_OPTS -da\"/' " + CASSANDRA_ENV)
-                        // use caches for keys & rows
-                        .run("sed -i -e \"s/key_cache_size_in_mb:/key_cache_size_in_mb: 256/\" " + CASSANDRA_YAML)
-                        .run("sed -i -e \"s/row_cache_size_in_mb: 0/row_cache_size_in_mb: 512/\" " + CASSANDRA_YAML)
-                        .build()))
-            .withCreateContainerCmdModifier(cmd -> cmd.withMemory(2000 * 1024 * 1024L))
-            .withCreateContainerCmdModifier(cmd -> cmd.getHostConfig().withTmpFs(ImmutableMap.of("/var/lib/cassandra", "rw,noexec,nosuid,size=100m")))
-            .withExposedPorts(CASSANDRA_PORT)
-            .withLogConsumer(this::displayDockerLog);
-        cassandraContainer
-            .waitingFor(new CassandraWaitStrategy(cassandraContainer));
-    }
-
-    private void displayDockerLog(OutputFrame outputFrame) {
-        logger.info(outputFrame.getUtf8String());
-    }
-
     @Override
     public Statement apply(Statement base, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                cassandraContainer.apply(base, description).evaluate();
-            }
-        };
+        return base;
     }
 
     public void start() {
-        cassandraContainer.start();
+
     }
 
     public void stop() {
-        cassandraContainer.stop();
+
     }
 
     public Host getHost() {
-        return Host.from(
-            getIp(),
-            getBindingPort());
+        return DockerCassandraSingleton.singleton.getHost();
     }
     
     public String getIp() {
-        return cassandraContainer.getContainerIpAddress();
+        return DockerCassandraSingleton.singleton.getIp();
     }
 
     public int getBindingPort() {
-        return cassandraContainer.getMappedPort(CASSANDRA_PORT);
+        return DockerCassandraSingleton.singleton.getBindingPort();
     }
 
     public GenericContainer<?> getRawContainer() {
-        return cassandraContainer;
+        return DockerCassandraSingleton.singleton.getRawContainer();
     }
 
     public void pause() {
-        client.pauseContainerCmd(cassandraContainer.getContainerId());
+        DockerCassandraSingleton.singleton.pause();
     }
 
     public void unpause() {
-        client.unpauseContainerCmd(cassandraContainer.getContainerId());
+        DockerCassandraSingleton.singleton.unpause();
     }
 
 }

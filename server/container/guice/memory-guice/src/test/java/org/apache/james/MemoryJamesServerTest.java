@@ -23,14 +23,13 @@ import java.io.IOException;
 
 import org.junit.Rule;
 
-public class MemoryJamesServerTest extends AbstractJmapJamesServerTest {
-
+public class MemoryJamesServerTest extends AbstractJamesServerTest {
     @Rule
     public MemoryJmapTestRule memoryJmap = new MemoryJmapTestRule();
 
     @Override
     protected GuiceJamesServer createJamesServer() throws IOException {
-        return memoryJmap.jmapServer();
+        return memoryJmap.jmapServer(DOMAIN_LIST_CONFIGURATION_MODULE);
     }
 
     @Override

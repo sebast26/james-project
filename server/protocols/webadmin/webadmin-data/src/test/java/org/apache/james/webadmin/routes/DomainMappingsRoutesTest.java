@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.isEmptyString;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -59,6 +59,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
 import io.restassured.RestAssured;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
@@ -70,7 +71,9 @@ class DomainMappingsRoutesTest {
     private WebAdminServer webAdminServer;
 
     private void createServer(DomainMappingsRoutes domainMappingsRoutes) throws Exception {
-        webAdminServer = WebAdminUtils.createWebAdminServer(new DefaultMetricFactory(), domainMappingsRoutes);
+        webAdminServer = WebAdminUtils.createWebAdminServer(
+                new DefaultMetricFactory(),
+                domainMappingsRoutes);
         webAdminServer.configure(NO_CONFIGURATION);
         webAdminServer.await();
 
@@ -90,6 +93,10 @@ class DomainMappingsRoutesTest {
     @AfterEach
     void tearDown() {
         webAdminServer.destroy();
+    }
+
+    @Nested
+    class Authentication {
     }
 
     @Nested

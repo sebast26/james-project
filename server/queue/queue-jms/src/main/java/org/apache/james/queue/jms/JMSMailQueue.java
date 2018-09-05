@@ -90,7 +90,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
             try {
                 session.close();
             } catch (JMSException e) {
-                LOGGER.error("Error while closing session", e);
+                // Ignore. See JAMES-2509
             }
         }
     }
@@ -100,7 +100,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
             try {
                 producer.close();
             } catch (JMSException e) {
-                LOGGER.error("Error while closing producer", e);
+                // Ignore. See JAMES-2509
             }
         }
     }
@@ -110,7 +110,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
             try {
                 consumer.close();
             } catch (JMSException e) {
-                LOGGER.error("Error while closing consumer", e);
+                // Ignore. See JAMES-2509
             }
         }
     }
@@ -130,7 +130,7 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
             try {
                 browser.close();
             } catch (JMSException e) {
-                LOGGER.error("Error while closing browser", e);
+                // Ignore. See JAMES-2509
             }
         }
     }
@@ -412,22 +412,24 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
         splitter.split(attributeNames)
                 .forEach(name -> setMailAttribute(message, mail, name));
 
-        String sender = message.getStringProperty(JAMES_MAIL_SENDER);
-        if (sender == null || sender.trim().length() <= 0) {
-            mail.setSender(null);
-        } else {
-            try {
-                mail.setSender(new MailAddress(sender));
-            } catch (AddressException e) {
-                // Should never happen as long as the user does not modify the
-                // the header by himself
-                LOGGER.error("Unable to parse the sender address {} for mail {}, so we fallback to a null sender", sender, mail.getName(), e);
-                mail.setSender(null);
-            }
-        }
-
+        mail.setSender(getMailSender(message.getStringProperty(JAMES_MAIL_SENDER), mail));
         mail.setState(message.getStringProperty(JAMES_MAIL_STATE));
+    }
 
+    private MailAddress getMailSender(String sender, Mail mail) {
+        if (sender == null || sender.trim().length() <= 0) {
+            return null;
+        }
+        if (sender.equals(MailAddress.NULL_SENDER_AS_STRING)) {
+            return MailAddress.nullSender();
+        }
+        try {
+            return new MailAddress(sender);
+        } catch (AddressException e) {
+            // Should never happen as long as the user does not modify the header by himself
+            LOGGER.error("Unable to parse the sender address {} for mail {}, so we fallback to a null sender", sender, mail.getName(), e);
+            return MailAddress.nullSender();
+        }
     }
 
     /**
@@ -476,60 +478,48 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
 
     @Override
     public long getSize() throws MailQueueException {
-        QueueBrowser browser = null;
-        try {
-            browser = session.createBrowser(queue);
+        try (QueueBrowser browser = session.createBrowser(queue)) {
             Enumeration<?> enumeration = browser.getEnumeration();
             return Iterators.size(new EnumerationIterator(enumeration));
         } catch (Exception e) {
             LOGGER.error("Unable to get size of queue {}", queueName, e);
             throw new MailQueueException("Unable to get size of queue " + queueName, e);
-        } finally {
-            closeBrowser(browser);
         }
     }
 
     @Override
     public long flush() throws MailQueueException {
-        Session session = null;
-        Message message = null;
-        MessageConsumer consumer = null;
-        MessageProducer producer = null;
         boolean first = true;
         long count = 0;
-        try {
-
-            session = connection.createSession(true, Session.SESSION_TRANSACTED);
+        try (Session session = connection.createSession(true, Session.SESSION_TRANSACTED)) {
             Queue queue = session.createQueue(queueName);
-            consumer = session.createConsumer(queue);
-            producer = session.createProducer(queue);
+            try (MessageConsumer consumer = session.createConsumer(queue)) {
+                try (MessageProducer producer = session.createProducer(queue)) {
 
-            while (first || message != null) {
-                if (first) {
-                    // give the consumer 2000 ms to receive messages
-                    message = consumer.receive(2000);
-                } else {
-                    message = consumer.receiveNoWait();
-                }
-                first = false;
+                    Message message = null;
+                    while (first || message != null) {
+                        if (first) {
+                            // give the consumer 2000 ms to receive messages
+                            message = consumer.receive(2000);
+                        } else {
+                            message = consumer.receiveNoWait();
+                        }
+                        first = false;
 
-                if (message != null) {
-                    Message m = copy(session, message);
-                    m.setBooleanProperty(FORCE_DELIVERY, true);
-                    producer.send(m, message.getJMSDeliveryMode(), message.getJMSPriority(), message.getJMSExpiration());
-                    count++;
+                        if (message != null) {
+                            Message m = copy(session, message);
+                            m.setBooleanProperty(FORCE_DELIVERY, true);
+                            producer.send(m, message.getJMSDeliveryMode(), message.getJMSPriority(), message.getJMSExpiration());
+                            count++;
+                        }
+                    }
+                    session.commit();
+                    return count;
                 }
             }
-            session.commit();
-            return count;
         } catch (Exception e) {
             LOGGER.error("Unable to flush mail", e);
-            rollback(session);
             throw new MailQueueException("Unable to get size of queue " + queueName, e);
-        } finally {
-            closeConsumer(consumer);
-            closeProducer(producer);
-            closeSession(session);
         }
     }
 
@@ -553,37 +543,32 @@ public class JMSMailQueue implements ManageableMailQueue, JMSSupport, MailPriori
      * @return messages
      */
     public List<Message> removeWithSelector(String selector) throws MailQueueException {
-        Session session = null;
-        Message message = null;
-        MessageConsumer consumer = null;
         boolean first = true;
         List<Message> messages = new ArrayList<>();
 
         try {
-            session = connection.createSession(true, Session.SESSION_TRANSACTED);
-            Queue queue = session.createQueue(queueName);
-            consumer = session.createConsumer(queue, selector);
-            while (first || message != null) {
-                if (first) {
-                    // give the consumer 2000 ms to receive messages
-                    message = consumer.receive(2000);
-                } else {
-                    message = consumer.receiveNoWait();
+            try (Session session = connection.createSession(true, Session.SESSION_TRANSACTED)) {
+                Queue queue = session.createQueue(queueName);
+                try (MessageConsumer consumer = session.createConsumer(queue, selector)) {
+                    Message message = null;
+                    while (first || message != null) {
+                        if (first) {
+                            // give the consumer 2000 ms to receive messages
+                            message = consumer.receive(2000);
+                        } else {
+                            message = consumer.receiveNoWait();
+                        }
+                        first = false;
+                        if (message != null) {
+                            messages.add(message);
+                        }
+                    }
                 }
-                first = false;
-                if (message != null) {
-                    messages.add(message);
-                }
+                session.commit();
             }
-            session.commit();
             return messages;
         } catch (Exception e) {
-            rollback(session);
             throw new MailQueueException("Unable to remove mails", e);
-
-        } finally {
-            closeConsumer(consumer);
-            closeSession(session);
         }
     }
 

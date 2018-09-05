@@ -26,7 +26,6 @@ import org.apache.james.DockerCassandraRule;
 import org.apache.james.GuiceJamesServer;
 import org.apache.james.jmap.methods.integration.SetMailboxesMethodTest;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 
 public class CassandraSetMailboxesMethodTest extends SetMailboxesMethodTest {
@@ -45,16 +44,6 @@ public class CassandraSetMailboxesMethodTest extends SetMailboxesMethodTest {
     @Override
     protected void await() {
         rule.await();
-    }
-
-    @Override
-    @Ignore
-    public void setMailboxesShouldCreateWhenOverLimitName() throws Exception {
-    }
-
-    @Override
-    @Ignore
-    public void setMailboxesShouldUpdateMailboxWhenOverLimitName() throws Exception {
     }
 
 }

@@ -86,8 +86,13 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-util-java8</artifactId>
+            <artifactId>james-server-util</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>james-server-testing</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -136,12 +141,6 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <version>3.3.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>

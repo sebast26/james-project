@@ -50,10 +50,10 @@
         <module>container/jetty</module>
         <module>container/lifecycle-api</module>
         <module>container/mailbox-adapter</module>
+        <module>container/mailbox-jmx</module>
         <module>container/metrics/metrics-es-reporter</module>
         <module>container/spring</module>
         <module>container/util</module>
-        <module>container/util-java8</module>
 
         <module>data/data-api</module>
         <module>data/data-cassandra</module>
@@ -72,6 +72,7 @@
         <module>dns-service/dnsservice-api</module>
         <module>dns-service/dnsservice-dnsjava</module>
         <module>dns-service/dnsservice-library</module>
+        <module>dns-service/dnsservice-test</module>
 
         <module>mailet/integration-testing</module>
 

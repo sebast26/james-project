@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.james.filesystem.api.FileSystem;
 import org.slf4j.Logger;
@@ -45,7 +46,7 @@ public class FileConfigurationProvider implements ConfigurationProvider {
     public static final HierarchicalConfiguration EMTY_CONFIGURATION = new HierarchicalConfiguration();
 
     public static XMLConfiguration getConfig(InputStream configStream) throws ConfigurationException {
-        XMLConfiguration.setDefaultListDelimiter(SEMICOLON);
+        PropertiesConfiguration.setDefaultListDelimiter(SEMICOLON);
         XMLConfiguration config = new XMLConfiguration();
         config.setDelimiterParsingDisabled(true);
         config.setAttributeSplittingDisabled(true);

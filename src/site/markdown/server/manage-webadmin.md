@@ -6,6 +6,8 @@ The web administration supports for now the CRUD operations on the domains, the 
 
 **WARNING**: This API allow authentication only via the use of JWT. If not configured with JWT, an administrator should ensure an attacker can not use this API.
 
+By the way, some endpoints are not filtered by authentication. Those endpoints are not related to data stored in James, for example: Swagger documentation & James health checks.
+
 Please also note **webadmin** is only enabled with **Guice**. You can not use it when using James with **Spring**, as the required injections are not implemented.
 
 In case of any error, the system will return an error message which is json format like this:
@@ -24,6 +26,7 @@ as exposed above). To avoid information duplication, this is ommited on endpoint
 
 ## Navigation menu
 
+ - [HealthCheck](#HealthCheck)
  - [Administrating domains](#Administrating_domains)
  - [Administrating users](#Administrating_users)
  - [Administrating user mailboxes](#Administrating_user_mailboxes)
@@ -39,6 +42,21 @@ as exposed above). To avoid information duplication, this is ommited on endpoint
  - [Administrating DLP Configuration](#Administrating_dlp_configuration)
  - [Administrating Sieve quotas](#Administrating_Sieve_quotas)
  - [Task management](#Task_management)
+
+## HealthCheck
+
+This endpoint is simple for now and is just returning the http status code corresponding to the state of checks (see below).
+The user has to check in the logs in order to have more information about failing checks.
+
+```
+curl -XGET http://ip:port/healthcheck
+```
+
+Response codes:
+
+ - 200: All checks have answered with a Healthy status
+ - 500: At least one check have answered with a Unhealthy or Degraded status
+
 
 ## Administrating domains
 
@@ -1791,6 +1809,7 @@ Each `senderDomain` correspond to a distinct DLP configuration.
 - [List DLP configuration by sender domain](List_dlp_configuration_by_sender_domain)
 - [Store DLP configuration by sender domain](Store_dlp_configuration_by_sender_domain)
 - [Remove DLP configuration by sender domain](Remove_dlp_configuration_by_sender_domain)
+- [Fetch a DLP configuration item by sender domain and rule id](Fetch_a_dlp_configuration_item_by_sender_domain_and_rule_id)
 
 ### List DLP configuration by sender domain
 
@@ -1888,6 +1907,34 @@ Response codes:
  - 204: DLP configuration is removed
  - 400: Invalid senderDomain or payload in request
  - 404: The domain does not exist.
+
+
+### Fetch a DLP configuration item by sender domain and rule id
+
+Retrieve a DLP configuration rule for corresponding `senderDomain` and a `ruleId`
+
+```
+curl -XGET http://ip:port/dlp/rules/senderDomain/rules/ruleId
+```
+
+Response codes:
+
+ - 200: A dlp configuration item is returned
+ - 400: Invalid senderDomain or payload in request
+ - 404: The domain and/or the rule does not exist.
+
+This is an example of returned body.
+
+```
+{
+  "id": "1",
+  "expression": "james.org",
+  "explanation": "Find senders or recipients containing james[any char]org",
+  "targetsSender": true,
+  "targetsRecipients": true,
+  "targetsContent": false
+}
+```
 
 ## Administrating Sieve quotas
 

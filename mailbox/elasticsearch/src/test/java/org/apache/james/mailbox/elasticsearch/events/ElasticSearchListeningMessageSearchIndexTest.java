@@ -18,9 +18,9 @@
  ****************************************************************/
 package org.apache.james.mailbox.elasticsearch.events;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.refEq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -106,7 +106,6 @@ public class ElasticSearchListeningMessageSearchIndexTest {
         verify(elasticSearchIndexer).index(eq(ELASTIC_SEARCH_ID), eq(EXPECTED_JSON_CONTENT));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void addShouldIndexEmailBodyWhenNotIndexableAttachment() throws Exception {
         //Given
@@ -136,7 +135,6 @@ public class ElasticSearchListeningMessageSearchIndexTest {
         return message;
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void addShouldNotPropagateExceptionWhenExceptionOccurs() throws Exception {
         //Given

@@ -35,8 +35,7 @@
     <dependencies>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>apache-mailet-base</artifactId>
-            <type>test-jar</type>
+            <artifactId>apache-mailet-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -55,8 +54,7 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-dnsservice-api</artifactId>
-            <type>test-jar</type>
+            <artifactId>james-server-dnsservice-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -96,7 +94,7 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-util-java8</artifactId>
+            <artifactId>james-server-util</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

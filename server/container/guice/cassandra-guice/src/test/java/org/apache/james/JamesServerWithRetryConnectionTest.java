@@ -30,15 +30,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.james.modules.protocols.ImapGuiceProbe;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
-import org.testcontainers.shaded.com.google.common.base.Throwables;
 
 public class JamesServerWithRetryConnectionTest {
-    private static final int IMAP_PORT = 1143;
     private static final long WAITING_TIME = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
 
     @ClassRule
@@ -102,7 +101,7 @@ public class JamesServerWithRetryConnectionTest {
             try {
                 Thread.sleep(waitingTime);
             } catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
             }
             action.execute();
         });
@@ -110,7 +109,7 @@ public class JamesServerWithRetryConnectionTest {
 
     private void assertThatServerStartCorrectly() throws Exception {
         jamesServer.start();
-        socketChannel.connect(new InetSocketAddress("127.0.0.1", IMAP_PORT));
+        socketChannel.connect(new InetSocketAddress("127.0.0.1", jamesServer.getProbe(ImapGuiceProbe.class).getImapPort()));
         assertThat(getServerConnectionResponse(socketChannel)).startsWith("* OK JAMES IMAP4rev1 Server");
     }
 

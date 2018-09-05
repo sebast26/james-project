@@ -20,8 +20,8 @@
 package org.apache.james.imap.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -236,7 +236,7 @@ public class MoveProcessorTest {
     }
 
     @Test
-    public void processShouldNotHandleCopyRequests() throws Exception {
+    public void processShouldNotHandleCopyRequests() {
         CopyRequest copyRequest = new CopyRequest(ImapCommand.anyStateCommand("Name"), new IdRange[] {new IdRange(4, 6)}, ImapConstants.INBOX_NAME, true, TAG);
 
         testee.process(copyRequest, mockResponder, mockImapSession);

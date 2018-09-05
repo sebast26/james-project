@@ -20,7 +20,7 @@ package org.apache.james.jmap.methods;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -190,6 +190,7 @@ public class GetMessagesMethodTest {
     }
     
     @Test
+    @SuppressWarnings("unchecked")
     public void processShouldFetchMessages() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         ComposedMessageId message1 = inbox.appendMessage(AppendCommand.from(messageContent1), session);
@@ -217,6 +218,7 @@ public class GetMessagesMethodTest {
     }
     
     @Test
+    @SuppressWarnings("unchecked")
     public void processShouldFetchHtmlMessage() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
         ComposedMessageId message = inbox.appendMessage(
@@ -314,6 +316,7 @@ public class GetMessagesMethodTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void processShouldReturnTextBodyWhenEmptyTextBodyAndNotEmptyHtmlBody() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
 
@@ -340,6 +343,7 @@ public class GetMessagesMethodTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void processShouldReturnEmptyTextBodyAndHtmlBodyWhenThoseAreEmpty() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
 
@@ -365,6 +369,7 @@ public class GetMessagesMethodTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void processShouldNotOverrideTextBodyWhenItIsThere() throws Exception {
         MessageManager inbox = mailboxManager.getMailbox(inboxPath, session);
 

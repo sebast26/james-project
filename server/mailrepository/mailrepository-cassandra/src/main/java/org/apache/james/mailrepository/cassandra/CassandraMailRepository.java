@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -38,7 +39,7 @@ import javax.mail.internet.MimeMessage;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.james.blob.api.BlobId;
-import org.apache.james.blob.api.ObjectStore;
+import org.apache.james.blob.api.BlobStore;
 import org.apache.james.mailrepository.api.MailKey;
 import org.apache.james.mailrepository.api.MailRepository;
 import org.apache.james.mailrepository.api.MailRepositoryUrl;
@@ -56,14 +57,14 @@ public class CassandraMailRepository implements MailRepository {
     private final CassandraMailRepositoryKeysDAO keysDAO;
     private final CassandraMailRepositoryCountDAO countDAO;
     private final CassandraMailRepositoryMailDAO mailDAO;
-    private final ObjectStore objectStore;
+    private final BlobStore blobStore;
 
-    public CassandraMailRepository(MailRepositoryUrl url, CassandraMailRepositoryKeysDAO keysDAO, CassandraMailRepositoryCountDAO countDAO, CassandraMailRepositoryMailDAO mailDAO, ObjectStore objectStore) {
+    public CassandraMailRepository(MailRepositoryUrl url, CassandraMailRepositoryKeysDAO keysDAO, CassandraMailRepositoryCountDAO countDAO, CassandraMailRepositoryMailDAO mailDAO, BlobStore blobStore) {
         this.url = url;
         this.keysDAO = keysDAO;
         this.countDAO = countDAO;
         this.mailDAO = mailDAO;
-        this.objectStore = objectStore;
+        this.blobStore = blobStore;
     }
 
     @Override
@@ -73,15 +74,14 @@ public class CassandraMailRepository implements MailRepository {
             Pair<byte[], byte[]> splitHeaderBody = splitHeaderBody(mail.getMessage());
 
             CompletableFuture<Pair<BlobId, BlobId>> blobIds = CompletableFutureUtil.combine(
-                objectStore.save(splitHeaderBody.getLeft()),
-                objectStore.save(splitHeaderBody.getRight()),
+                blobStore.save(splitHeaderBody.getLeft()),
+                blobStore.save(splitHeaderBody.getRight()),
                 Pair::of);
 
             blobIds.thenCompose(Throwing.function(pair ->
                 mailDAO.store(url, mail, pair.getLeft(), pair.getRight())))
-                .thenCompose(any -> CompletableFuture.allOf(
-                    countDAO.increment(url),
-                    keysDAO.store(url, mailKey)))
+                .thenCompose(any -> keysDAO.store(url, mailKey))
+                .thenCompose(this::increaseSizeIfStored)
                 .join();
             return mailKey;
         } catch (IOException e) {
@@ -89,7 +89,14 @@ public class CassandraMailRepository implements MailRepository {
         }
     }
 
-    public Pair<byte[], byte[]> splitHeaderBody(MimeMessage message) throws IOException, MessagingException {
+    private CompletionStage<Void> increaseSizeIfStored(Boolean isStored) {
+        if (isStored) {
+            return countDAO.increment(url);
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    private Pair<byte[], byte[]> splitHeaderBody(MimeMessage message) throws IOException, MessagingException {
         byte[] messageAsArray = messageToArray(message);
         int bodyStartOctet = computeBodyStartOctet(messageAsArray);
 
@@ -98,20 +105,20 @@ public class CassandraMailRepository implements MailRepository {
             getBodyBytes(messageAsArray, bodyStartOctet));
     }
 
-    public byte[] messageToArray(MimeMessage message) throws IOException, MessagingException {
+    private byte[] messageToArray(MimeMessage message) throws IOException, MessagingException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         message.writeTo(byteArrayOutputStream);
         return byteArrayOutputStream.toByteArray();
     }
 
-    public byte[] getHeaderBytes(byte[] messageContentAsArray, int bodyStartOctet) {
+    private byte[] getHeaderBytes(byte[] messageContentAsArray, int bodyStartOctet) {
         ByteBuffer headerContent = ByteBuffer.wrap(messageContentAsArray, 0, bodyStartOctet);
         byte[] headerBytes = new byte[bodyStartOctet];
         headerContent.get(headerBytes);
         return headerBytes;
     }
 
-    public byte[] getBodyBytes(byte[] messageContentAsArray, int bodyStartOctet) {
+    private byte[] getBodyBytes(byte[] messageContentAsArray, int bodyStartOctet) {
         if (bodyStartOctet < messageContentAsArray.length) {
             ByteBuffer bodyContent = ByteBuffer.wrap(messageContentAsArray,
                 bodyStartOctet,
@@ -124,7 +131,7 @@ public class CassandraMailRepository implements MailRepository {
         }
     }
 
-    public int computeBodyStartOctet(byte[] messageAsArray) throws IOException {
+    private int computeBodyStartOctet(byte[] messageAsArray) throws IOException {
         try (BodyOffsetInputStream bodyOffsetInputStream =
                  new BodyOffsetInputStream(new ByteArrayInputStream(messageAsArray))) {
             consume(bodyOffsetInputStream);
@@ -156,10 +163,10 @@ public class CassandraMailRepository implements MailRepository {
             .orElse(null);
     }
 
-    public CompletableFuture<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
+    private CompletableFuture<Mail> toMail(CassandraMailRepositoryMailDAO.MailDTO mailDTO) {
         return CompletableFutureUtil.combine(
-            objectStore.read(mailDTO.getHeaderBlobId()),
-            objectStore.read(mailDTO.getBodyBlobId()),
+            blobStore.readBytes(mailDTO.getHeaderBlobId()),
+            blobStore.readBytes(mailDTO.getBodyBlobId()),
             Bytes::concat)
             .thenApply(this::toMimeMessage)
             .thenApply(mimeMessage -> mailDTO.getMailBuilder()
@@ -167,7 +174,7 @@ public class CassandraMailRepository implements MailRepository {
                 .build());
     }
 
-    public MimeMessage toMimeMessage(byte[] bytes) {
+    private MimeMessage toMimeMessage(byte[] bytes) {
         try {
             return new MimeMessage(Session.getInstance(new Properties()), new ByteArrayInputStream(bytes));
         } catch (MessagingException e) {
@@ -193,20 +200,26 @@ public class CassandraMailRepository implements MailRepository {
         removeAsync(key).join();
     }
 
-    public CompletableFuture<Void> removeAsync(MailKey key) {
-        return CompletableFuture.allOf(
-            keysDAO.remove(url, key),
-            countDAO.decrement(url))
+    private CompletableFuture<Void> removeAsync(MailKey key) {
+        return keysDAO.remove(url, key)
+            .thenCompose(this::decreaseSizeIfDeleted)
             .thenCompose(any -> mailDAO.remove(url, key));
     }
 
+    private CompletionStage<Void> decreaseSizeIfDeleted(Boolean isDeleted) {
+        if (isDeleted) {
+            return countDAO.decrement(url);
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
     @Override
-    public long size() throws MessagingException {
+    public long size() {
         return countDAO.getCount(url).join();
     }
 
     @Override
-    public void removeAll() throws MessagingException {
+    public void removeAll() {
         keysDAO.list(url)
             .thenCompose(stream -> FluentFutureStream.of(stream.map(this::removeAsync))
                 .completableFuture())

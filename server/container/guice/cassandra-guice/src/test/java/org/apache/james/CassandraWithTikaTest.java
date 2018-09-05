@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.junit.ClassRule;
 import org.junit.Rule;
 
-public class CassandraWithTikaTest extends AbstractJmapJamesServerTest {
+public class CassandraWithTikaTest extends AbstractJamesServerTest {
 
     @ClassRule
     public static final DockerCassandraRule cassandra = new DockerCassandraRule();
@@ -36,7 +36,7 @@ public class CassandraWithTikaTest extends AbstractJmapJamesServerTest {
 
     @Override
     protected GuiceJamesServer createJamesServer() throws IOException {
-        return cassandraJmap.jmapServer(guiceTikaRule.getModule(), cassandra.getModule());
+        return cassandraJmap.jmapServer(guiceTikaRule.getModule(), cassandra.getModule(), DOMAIN_LIST_CONFIGURATION_MODULE);
     }
 
     @Override

@@ -35,6 +35,10 @@
     <dependencies>
         <dependency>
             <groupId>${james.groupId}</groupId>
+            <artifactId>james-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${james.groupId}</groupId>
             <artifactId>james-server-jwt</artifactId>
         </dependency>
         <dependency>
@@ -43,7 +47,7 @@
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
-            <artifactId>james-server-util-java8</artifactId>
+            <artifactId>james-server-util</artifactId>
         </dependency>
         <dependency>
             <groupId>${james.groupId}</groupId>
@@ -99,7 +103,7 @@
         <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-jaxrs</artifactId>
-            <version>1.5.13</version>
+            <version>1.5.21</version>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>

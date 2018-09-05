@@ -20,7 +20,7 @@
 package org.apache.james.mailbox.cassandra.mail.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +34,7 @@ import org.apache.james.backends.cassandra.components.CassandraModule;
 import org.apache.james.backends.cassandra.init.configuration.CassandraConfiguration;
 import org.apache.james.backends.cassandra.migration.Migration;
 import org.apache.james.backends.cassandra.utils.CassandraUtils;
-import org.apache.james.blob.cassandra.CassandraBlobId;
+import org.apache.james.blob.api.HashBlobId;
 import org.apache.james.blob.cassandra.CassandraBlobModule;
 import org.apache.james.blob.cassandra.CassandraBlobsDAO;
 import org.apache.james.mailbox.cassandra.mail.CassandraAttachmentDAO;
@@ -52,7 +52,7 @@ import org.junit.Test;
 public class AttachmentV2MigrationTest {
     public static final AttachmentId ATTACHMENT_ID = AttachmentId.from("id1");
     public static final AttachmentId ATTACHMENT_ID_2 = AttachmentId.from("id2");
-    private static final CassandraBlobId.Factory BLOB_ID_FACTORY = new CassandraBlobId.Factory();
+    private static final HashBlobId.Factory BLOB_ID_FACTORY = new HashBlobId.Factory();
 
     @ClassRule
     public static DockerCassandraRule cassandraServer = new DockerCassandraRule();
@@ -130,9 +130,9 @@ public class AttachmentV2MigrationTest {
             .contains(CassandraAttachmentDAOV2.from(attachment1, BLOB_ID_FACTORY.forPayload(attachment1.getBytes())));
         assertThat(attachmentDAOV2.getAttachment(ATTACHMENT_ID_2).join())
             .contains(CassandraAttachmentDAOV2.from(attachment2, BLOB_ID_FACTORY.forPayload(attachment2.getBytes())));
-        assertThat(blobsDAO.read(BLOB_ID_FACTORY.forPayload(attachment1.getBytes())).join())
+        assertThat(blobsDAO.readBytes(BLOB_ID_FACTORY.forPayload(attachment1.getBytes())).join())
             .isEqualTo(attachment1.getBytes());
-        assertThat(blobsDAO.read(BLOB_ID_FACTORY.forPayload(attachment2.getBytes())).join())
+        assertThat(blobsDAO.readBytes(BLOB_ID_FACTORY.forPayload(attachment2.getBytes())).join())
             .isEqualTo(attachment2.getBytes());
     }
 
@@ -171,7 +171,7 @@ public class AttachmentV2MigrationTest {
         when(attachmentDAO.retrieveAll()).thenReturn(Stream.of(
             attachment1,
             attachment2));
-        when(blobsDAO.save(any())).thenThrow(new RuntimeException());
+        when(blobsDAO.save(any(byte[].class))).thenThrow(new RuntimeException());
 
         assertThat(migration.run()).isEqualTo(Migration.Result.PARTIAL);
     }

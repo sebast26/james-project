@@ -18,6 +18,8 @@
  ****************************************************************/
 package org.apache.james.sieverepository.lib;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -37,10 +39,7 @@ import org.apache.james.sieverepository.api.exception.IsActiveException;
 import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
-
 import org.junit.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class AbstractSieveRepositoryTest {
 
@@ -149,7 +148,6 @@ public abstract class AbstractSieveRepositoryTest {
     @Test
     public void setActiveShouldWork() throws Exception {
         sieveRepository.putScript(USER, SCRIPT_NAME, SCRIPT_CONTENT);
-        final InputStream script = sieveRepository.getScript(USER, SCRIPT_NAME);
         sieveRepository.setActive(USER, SCRIPT_NAME);
         assertThat(sieveRepository.listScripts(USER)).containsOnly(new ScriptSummary(SCRIPT_NAME, true));
     }

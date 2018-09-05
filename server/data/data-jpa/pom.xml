@@ -154,7 +154,6 @@
                 <version>${apache.openjpa.version}</version>
                 <configuration>
                     <includes>org/apache/james/sieve/jpa/model/JPASieveQuota.class,
-                        org/apache/james/sieve/jpa/model/JPASieveScriptId.class,
                         org/apache/james/sieve/jpa/model/JPASieveScript.class,
                         org/apache/james/user/jpa/model/JPAUser.class,
                         org/apache/james/rrt/jpa/model/JPARecipientRewrite.class,
@@ -170,7 +169,6 @@
                         <property>
                             <name>metaDataFactory</name>
                             <value>jpa(Types=org.apache.james.sieve.jpa.model.JPASieveQuota;
-                                org.apache.james.sieve.jpa.model.JPASieveScriptId;
                                 org.apache.james.sieve.jpa.model.JPASieveScript;
                                 org.apache.james.user.jpa.model.JPAUser;
                                 org.apache.james.rrt.jpa.model.JPARecipientRewrite;

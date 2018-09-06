@@ -2,3 +2,5 @@ target/
 dependency-reduced-pom.xml
 dockerfiles/run
 .m2
+.idea
+*.iml

@@ -129,16 +129,11 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private List<JPASieveScript> findAllSieveScriptsForUser(final User user) throws StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        try {
+        return transactionRunner.runAndRetrieveResult(entityManager -> {
             List<JPASieveScript> sieveScripts = entityManager.createNamedQuery("findAllByUsername", JPASieveScript.class)
                     .setParameter("username", user.asString()).getResultList();
             return sieveScripts != null ? sieveScripts : new ArrayList<>();
-        } catch (PersistenceException e) {
-            throw new StorageException("Unable to list scripts for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        }, throwStorageException("Unable to list scripts for user " + user.asString()));
     }
 
     @Override
@@ -156,14 +151,9 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private Optional<JPASieveScript> findActiveSieveScript(final User user) throws StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        try {
-            return findActiveSieveScript(user, entityManager);
-        } catch (PersistenceException e) {
-            throw new StorageException("Unable to find active script for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        return transactionRunner.runAndRetrieveResult(
+                Throwing.<EntityManager, Optional<JPASieveScript>>function(entityManager -> findActiveSieveScript(user, entityManager)).sneakyThrow(),
+                throwStorageException("Unable to find active script for user " + user.asString()));
     }
 
     private Optional<JPASieveScript> findActiveSieveScript(final User user, final EntityManager entityManager) throws StorageException {
@@ -221,8 +211,7 @@ public class JPASieveRepository implements SieveRepository {
 
     private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName) throws StorageException {
         return transactionRunner.runAndRetrieveResult(entityManager -> findSieveScript(user, scriptName, entityManager),
-                throwStorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString())
-        );
+                throwStorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString()));
     }
 
     private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName, final EntityManager entityManager) {
@@ -347,8 +336,7 @@ public class JPASieveRepository implements SieveRepository {
 
     private Optional<JPASieveQuota> findQuotaForUser(String username) throws StorageException {
         return transactionRunner.runAndRetrieveResult(entityManager -> findQuotaForUser(username, entityManager),
-                throwStorageException("Unable to find quota for user " + username)
-        );
+                throwStorageException("Unable to find quota for user " + username));
     }
 
     private <T> Function<PersistenceException, T> throwStorageException(String message) {

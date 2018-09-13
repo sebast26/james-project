@@ -220,14 +220,9 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName) throws StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        try {
-            return findSieveScript(user, scriptName, entityManager);
-        } catch (PersistenceException e) {
-            throw new StorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        return transactionRunner.runAndRetrieveResult(entityManager -> findSieveScript(user, scriptName, entityManager),
+                throwStorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString())
+        );
     }
 
     private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName, final EntityManager entityManager) {

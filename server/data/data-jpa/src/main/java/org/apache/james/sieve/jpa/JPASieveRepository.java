@@ -25,6 +25,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -51,6 +52,8 @@ import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
 import org.apache.james.sieverepository.api.exception.StorageException;
+
+import com.github.fge.lambdas.Throwing;
 
 public class JPASieveRepository implements SieveRepository {
     private static final String DEFAULT_SIEVE_QUOTA_USERNAME = "default.quota";
@@ -348,14 +351,15 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private Optional<JPASieveQuota> findQuotaForUser(String username) throws StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        try {
-            return findQuotaForUser(username, entityManager);
-        } catch (PersistenceException e) {
-            throw new StorageException("Unable to find quota for user " + username, e);
-        } finally {
-            entityManager.close();
-        }
+        return transactionRunner.runAndRetrieveResult(entityManager -> findQuotaForUser(username, entityManager),
+                throwStorageException("Unable to find quota for user " + username)
+        );
+    }
+
+    private <T> Function<PersistenceException, T> throwStorageException(String message) {
+        return Throwing.<PersistenceException, T>function(e -> {
+            throw new StorageException(message, e);
+        }).sneakyThrow();
     }
 
     private Optional<JPASieveQuota> findQuotaForUser(final String username, final EntityManager entityManager) {

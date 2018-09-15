@@ -100,25 +100,16 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void putScript(final User user, final ScriptName name, final ScriptContent content) throws StorageException, QuotaExceededException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-        try {
-            transaction.begin();
-
-            haveSpace(user, name, content.length());
-            JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
-            entityManager.persist(jpaSieveScript);
-
-            transaction.commit();
-        } catch (SieveRepositoryException e) {
-            rollbackTransactionIfActive(transaction);
-            throw e;
-        } catch (PersistenceException e) {
-            rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to put script for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        transactionRunner.runAndThrowOnException2(Throwing.<EntityManager>consumer(entityManager -> {
+            try {
+                haveSpace(user, name, content.length());
+                JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
+                entityManager.persist(jpaSieveScript);
+            } catch (QuotaExceededException | StorageException e) {
+                rollbackTransactionIfActive(entityManager.getTransaction());
+                throw e;
+            }
+        }).sneakyThrow(), throwStorageException("Unable to put script for user " + user.asString()));
     }
 
     @Override

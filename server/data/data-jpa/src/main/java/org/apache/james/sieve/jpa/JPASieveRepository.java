@@ -209,29 +209,19 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void deleteScript(final User user, final ScriptName name) throws ScriptNotFoundException, IsActiveException, StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-
-        try {
-            transaction.begin();
+        transactionRunner.runAndThrowOnException2(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, name, entityManager);
             if (!sieveScript.isPresent()) {
-                rollbackTransactionIfActive(transaction);
+                rollbackTransactionIfActive(entityManager.getTransaction());
                 throw new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString());
             }
             JPASieveScript sieveScriptToRemove = sieveScript.get();
             if (sieveScriptToRemove.isActive()) {
-                rollbackTransactionIfActive(transaction);
+                rollbackTransactionIfActive(entityManager.getTransaction());
                 throw new IsActiveException("Unable to delete active script " + name.getValue() + " for user " + user.asString());
             }
             entityManager.remove(sieveScriptToRemove);
-            transaction.commit();
-        } catch (PersistenceException e) {
-            rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to delete script " + name.getValue() + " for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        }).sneakyThrow(), throwStorageException("Unable to delete script " + name.getValue() + " for user " + user.asString()));
     }
 
     @Override

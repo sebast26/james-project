@@ -50,7 +50,6 @@ import org.apache.james.sieverepository.api.exception.IsActiveException;
 import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
-import org.apache.james.sieverepository.api.exception.SieveRepositoryException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 
 import com.github.fge.lambdas.Throwing;
@@ -159,26 +158,18 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void setActive(final User user, final ScriptName name) throws ScriptNotFoundException, StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-
-        try {
-            transaction.begin();
-            if (SieveRepository.NO_SCRIPT_NAME.equals(name)) {
-                switchOffActiveScript(user, entityManager);
-            } else {
-                setActiveScript(user, name, entityManager);
+        transactionRunner.runAndThrowOnException2(Throwing.<EntityManager>consumer(entityManager -> {
+            try {
+                if (SieveRepository.NO_SCRIPT_NAME.equals(name)) {
+                    switchOffActiveScript(user, entityManager);
+                } else {
+                    setActiveScript(user, name, entityManager);
+                }
+            } catch (StorageException | ScriptNotFoundException e) {
+                rollbackTransactionIfActive(entityManager.getTransaction());
+                throw e;
             }
-            transaction.commit();
-        } catch (SieveRepositoryException e) {
-            rollbackTransactionIfActive(transaction);
-            throw e;
-        } catch (PersistenceException e) {
-            rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to set active script " + name.getValue() + " for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        }).sneakyThrow(), throwStorageException("Unable to set active script " + name.getValue() + " for user " + user.asString()));
     }
 
     private void switchOffActiveScript(final User user, final EntityManager entityManager) throws StorageException {

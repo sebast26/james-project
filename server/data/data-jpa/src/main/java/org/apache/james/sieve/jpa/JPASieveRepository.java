@@ -226,32 +226,22 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void renameScript(final User user, final ScriptName oldName, final ScriptName newName) throws ScriptNotFoundException, DuplicateException, StorageException {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-
-        try {
-            transaction.begin();
+        transactionRunner.runAndThrowOnException2(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
             if (!sieveScript.isPresent()) {
-                rollbackTransactionIfActive(transaction);
+                rollbackTransactionIfActive(entityManager.getTransaction());
                 throw new ScriptNotFoundException("Unable to find script " + oldName.getValue() + " for user " + user.asString());
             }
 
             Optional<JPASieveScript> duplicatedSieveScript = findSieveScript(user, newName, entityManager);
             if (duplicatedSieveScript.isPresent()) {
-                rollbackTransactionIfActive(transaction);
+                rollbackTransactionIfActive(entityManager.getTransaction());
                 throw new DuplicateException("Unable to rename script. Duplicate found " + newName.getValue() + " for user " + user.asString());
             }
 
             JPASieveScript sieveScriptToRename = sieveScript.get();
             sieveScriptToRename.renameTo(newName);
-            transaction.commit();
-        } catch (PersistenceException e) {
-            rollbackTransactionIfActive(transaction);
-            throw new StorageException("Unable to rename script " + oldName.getValue() + " for user " + user.asString(), e);
-        } finally {
-            entityManager.close();
-        }
+        }).sneakyThrow(), throwStorageException("Unable to rename script " + oldName.getValue() + " for user " + user.asString()));
     }
 
     private void rollbackTransactionIfActive(final EntityTransaction transaction) {

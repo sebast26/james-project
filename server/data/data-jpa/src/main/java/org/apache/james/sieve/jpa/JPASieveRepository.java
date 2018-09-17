@@ -96,7 +96,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void putScript(User user, ScriptName name, ScriptContent content) throws StorageException, QuotaExceededException {
-        transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 haveSpace(user, name, content.length());
                 JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
@@ -155,7 +155,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void setActive(User user, ScriptName name) throws ScriptNotFoundException, StorageException {
-        transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 if (SieveRepository.NO_SCRIPT_NAME.equals(name)) {
                     switchOffActiveScript(user, entityManager);
@@ -206,7 +206,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void deleteScript(User user, ScriptName name) throws ScriptNotFoundException, IsActiveException, StorageException {
-        transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, name, entityManager);
             if (!sieveScript.isPresent()) {
                 rollbackTransactionIfActive(entityManager.getTransaction());
@@ -223,7 +223,7 @@ public class JPASieveRepository implements SieveRepository {
 
     @Override
     public void renameScript(User user, ScriptName oldName, ScriptName newName) throws ScriptNotFoundException, DuplicateException, StorageException {
-        transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
             if (!sieveScript.isPresent()) {
                 rollbackTransactionIfActive(entityManager.getTransaction());
@@ -315,7 +315,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
-        transactionRunner.runAndThrowOnException(Throwing.consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.consumer(entityManager -> {
             Optional<JPASieveQuota> sieveQuota = findQuotaForUser(username, entityManager);
             if (sieveQuota.isPresent()) {
                 JPASieveQuota jpaSieveQuota = sieveQuota.get();
@@ -329,7 +329,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private void removeQuotaForUser(String username) throws StorageException {
-        transactionRunner.runAndThrowOnException(Throwing.consumer(entityManager -> {
+        transactionRunner.runAndHandleException(Throwing.consumer(entityManager -> {
             Optional<JPASieveQuota> quotaForUser = findQuotaForUser(username, entityManager);
             quotaForUser.ifPresent(entityManager::remove);
         }), throwStorageException("Unable to remove quota for user " + username));

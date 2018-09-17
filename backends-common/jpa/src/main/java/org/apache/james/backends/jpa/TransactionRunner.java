@@ -76,8 +76,8 @@ public class TransactionRunner {
         }
     }
 
-    public <T> void runAndThrowOnException(Consumer<EntityManager> runnable,
-                                           Function<PersistenceException, T> errorHandler) {
+    public <T> void runAndHandleException(Consumer<EntityManager> runnable,
+                                          Function<PersistenceException, T> errorHandler) {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = entityManager.getTransaction();
         try {

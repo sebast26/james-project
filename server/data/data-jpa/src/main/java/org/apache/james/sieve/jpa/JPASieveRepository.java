@@ -318,7 +318,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private void setQuotaForUser(String username, QuotaSize quota) throws StorageException {
-        transactionRunner.runAndThrowOnException(entityManager -> {
+        transactionRunner.runAndThrowOnException2(Throwing.consumer(entityManager -> {
             Optional<JPASieveQuota> sieveQuota = findQuotaForUser(username, entityManager);
             if (sieveQuota.isPresent()) {
                 JPASieveQuota jpaSieveQuota = sieveQuota.get();
@@ -328,13 +328,13 @@ public class JPASieveRepository implements SieveRepository {
                 JPASieveQuota jpaSieveQuota = new JPASieveQuota(username, quota.asLong());
                 entityManager.persist(jpaSieveQuota);
             }
-        }, pe -> new StorageException("Unable to set quota for user " + username, pe));
+        }), throwStorageException("Unable to set quota for user " + username));
     }
 
     private void removeQuotaForUser(String username) throws StorageException {
-        transactionRunner.runAndThrowOnException(entityManager -> {
+        transactionRunner.runAndThrowOnException2(Throwing.consumer(entityManager -> {
             Optional<JPASieveQuota> quotaForUser = findQuotaForUser(username, entityManager);
             quotaForUser.ifPresent(entityManager::remove);
-        }, pe -> new StorageException("Unable to remove quota for user " + username, pe));
+        }), throwStorageException("Unable to remove quota for user " + username));
     }
 }

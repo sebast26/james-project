@@ -49,7 +49,7 @@ public class JPASieveQuota {
     protected JPASieveQuota() {
     }
 
-    public JPASieveQuota(final String username, final long size) {
+    public JPASieveQuota(String username, long size) {
         this.username = username;
         this.size = size;
     }
@@ -58,19 +58,19 @@ public class JPASieveQuota {
         return size;
     }
 
-    public void setSize(final QuotaSize quotaSize) {
+    public void setSize(QuotaSize quotaSize) {
         this.size = quotaSize.asLong();
     }
 
     @Override
-    public boolean equals(final Object o) {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        final JPASieveQuota that = (JPASieveQuota) o;
+        JPASieveQuota that = (JPASieveQuota) o;
         return Objects.equals(username, that.username);
     }
 

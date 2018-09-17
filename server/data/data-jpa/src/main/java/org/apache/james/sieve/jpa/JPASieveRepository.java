@@ -22,11 +22,9 @@ package org.apache.james.sieve.jpa;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -53,6 +51,7 @@ import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
 
 import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableList;
 
 public class JPASieveRepository implements SieveRepository {
     private static final String DEFAULT_SIEVE_QUOTA_USERNAME = "default.quota";
@@ -112,15 +111,15 @@ public class JPASieveRepository implements SieveRepository {
     @Override
     public List<ScriptSummary> listScripts(User user) throws StorageException {
         return findAllSieveScriptsForUser(user).stream()
-                .map(sieveScript -> new ScriptSummary(new ScriptName(sieveScript.getScriptName()), sieveScript.isActive()))
-                .collect(Collectors.toList());
+                .map(JPASieveScript::toSummary)
+                .collect(ImmutableList.toImmutableList());
     }
 
     private List<JPASieveScript> findAllSieveScriptsForUser(User user) throws StorageException {
         return transactionRunner.runAndRetrieveResult(entityManager -> {
             List<JPASieveScript> sieveScripts = entityManager.createNamedQuery("findAllByUsername", JPASieveScript.class)
                     .setParameter("username", user.asString()).getResultList();
-            return sieveScripts != null ? sieveScripts : new ArrayList<>();
+            return Optional.ofNullable(sieveScripts).orElse(ImmutableList.of());
         }, throwStorageException("Unable to list scripts for user " + user.asString()));
     }
 

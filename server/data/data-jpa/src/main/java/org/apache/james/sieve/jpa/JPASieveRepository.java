@@ -65,7 +65,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public void haveSpace(final User user, final ScriptName name, final long size) throws QuotaExceededException, StorageException {
+    public void haveSpace(User user, ScriptName name, long size) throws QuotaExceededException, StorageException {
         long usedSpace = findAllSieveScriptsForUser(user).stream()
                 .filter(sieveScript -> !sieveScript.getScriptName().equals(name.getValue()))
                 .mapToLong(JPASieveScript::getScriptSize)
@@ -91,12 +91,12 @@ public class JPASieveRepository implements SieveRepository {
         }
     }
 
-    private boolean overQuotaAfterModification(final long usedSpace, final long size, final QuotaSize quota) {
+    private boolean overQuotaAfterModification(long usedSpace, long size, QuotaSize quota) {
         return QuotaSize.size(usedSpace).add(size).isGreaterThan(quota);
     }
 
     @Override
-    public void putScript(final User user, final ScriptName name, final ScriptContent content) throws StorageException, QuotaExceededException {
+    public void putScript(User user, ScriptName name, ScriptContent content) throws StorageException, QuotaExceededException {
         transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 haveSpace(user, name, content.length());
@@ -110,13 +110,13 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public List<ScriptSummary> listScripts(final User user) throws StorageException {
+    public List<ScriptSummary> listScripts(User user) throws StorageException {
         return findAllSieveScriptsForUser(user).stream()
                 .map(sieveScript -> new ScriptSummary(new ScriptName(sieveScript.getScriptName()), sieveScript.isActive()))
                 .collect(Collectors.toList());
     }
 
-    private List<JPASieveScript> findAllSieveScriptsForUser(final User user) throws StorageException {
+    private List<JPASieveScript> findAllSieveScriptsForUser(User user) throws StorageException {
         return transactionRunner.runAndRetrieveResult(entityManager -> {
             List<JPASieveScript> sieveScripts = entityManager.createNamedQuery("findAllByUsername", JPASieveScript.class)
                     .setParameter("username", user.asString()).getResultList();
@@ -125,26 +125,26 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public ZonedDateTime getActivationDateForActiveScript(final User user) throws StorageException, ScriptNotFoundException {
+    public ZonedDateTime getActivationDateForActiveScript(User user) throws StorageException, ScriptNotFoundException {
         Optional<JPASieveScript> script = findActiveSieveScript(user);
         JPASieveScript activeSieveScript = script.orElseThrow(() -> new ScriptNotFoundException("Unable to find active script for user " + user.asString()));
         return activeSieveScript.getActivationDateTime().toZonedDateTime();
     }
 
     @Override
-    public InputStream getActive(final User user) throws ScriptNotFoundException, StorageException {
+    public InputStream getActive(User user) throws ScriptNotFoundException, StorageException {
         Optional<JPASieveScript> script = findActiveSieveScript(user);
         JPASieveScript activeSieveScript = script.orElseThrow(() -> new ScriptNotFoundException("Unable to find active script for user " + user.asString()));
         return IOUtils.toInputStream(activeSieveScript.getScriptContent(), StandardCharsets.UTF_8);
     }
 
-    private Optional<JPASieveScript> findActiveSieveScript(final User user) throws StorageException {
+    private Optional<JPASieveScript> findActiveSieveScript(User user) throws StorageException {
         return transactionRunner.runAndRetrieveResult(
                 Throwing.<EntityManager, Optional<JPASieveScript>>function(entityManager -> findActiveSieveScript(user, entityManager)).sneakyThrow(),
                 throwStorageException("Unable to find active script for user " + user.asString()));
     }
 
-    private Optional<JPASieveScript> findActiveSieveScript(final User user, final EntityManager entityManager) throws StorageException {
+    private Optional<JPASieveScript> findActiveSieveScript(User user, EntityManager entityManager) throws StorageException {
         try {
             JPASieveScript activeSieveScript = entityManager.createNamedQuery("findActiveByUsername", JPASieveScript.class)
                     .setParameter("username", user.asString()).getSingleResult();
@@ -155,7 +155,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public void setActive(final User user, final ScriptName name) throws ScriptNotFoundException, StorageException {
+    public void setActive(User user, ScriptName name) throws ScriptNotFoundException, StorageException {
         transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 if (SieveRepository.NO_SCRIPT_NAME.equals(name)) {
@@ -170,12 +170,12 @@ public class JPASieveRepository implements SieveRepository {
         }).sneakyThrow(), throwStorageException("Unable to set active script " + name.getValue() + " for user " + user.asString()));
     }
 
-    private void switchOffActiveScript(final User user, final EntityManager entityManager) throws StorageException {
+    private void switchOffActiveScript(User user, EntityManager entityManager) throws StorageException {
         Optional<JPASieveScript> activeSieveScript = findActiveSieveScript(user, entityManager);
         activeSieveScript.ifPresent(JPASieveScript::deactivate);
     }
 
-    private void setActiveScript(final User user, final ScriptName name, final EntityManager entityManager) throws StorageException, ScriptNotFoundException {
+    private void setActiveScript(User user, ScriptName name, EntityManager entityManager) throws StorageException, ScriptNotFoundException {
         JPASieveScript sieveScript = findSieveScript(user, name, entityManager)
                 .orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString()));
         findActiveSieveScript(user, entityManager).ifPresent(JPASieveScript::deactivate);
@@ -183,18 +183,18 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public InputStream getScript(final User user, final ScriptName name) throws ScriptNotFoundException, StorageException {
+    public InputStream getScript(User user, ScriptName name) throws ScriptNotFoundException, StorageException {
         Optional<JPASieveScript> script = findSieveScript(user, name);
         JPASieveScript sieveScript = script.orElseThrow(() -> new ScriptNotFoundException("Unable to find script " + name.getValue() + " for user " + user.asString()));
         return IOUtils.toInputStream(sieveScript.getScriptContent(), StandardCharsets.UTF_8);
     }
 
-    private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName) throws StorageException {
+    private Optional<JPASieveScript> findSieveScript(User user, ScriptName scriptName) throws StorageException {
         return transactionRunner.runAndRetrieveResult(entityManager -> findSieveScript(user, scriptName, entityManager),
                 throwStorageException("Unable to find script " + scriptName.getValue() + " for user " + user.asString()));
     }
 
-    private Optional<JPASieveScript> findSieveScript(final User user, final ScriptName scriptName, final EntityManager entityManager) {
+    private Optional<JPASieveScript> findSieveScript(User user, ScriptName scriptName, EntityManager entityManager) {
         try {
             JPASieveScript sieveScript = entityManager.createNamedQuery("findSieveScript", JPASieveScript.class)
                     .setParameter("username", user.asString())
@@ -206,7 +206,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public void deleteScript(final User user, final ScriptName name) throws ScriptNotFoundException, IsActiveException, StorageException {
+    public void deleteScript(User user, ScriptName name) throws ScriptNotFoundException, IsActiveException, StorageException {
         transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, name, entityManager);
             if (!sieveScript.isPresent()) {
@@ -223,7 +223,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public void renameScript(final User user, final ScriptName oldName, final ScriptName newName) throws ScriptNotFoundException, DuplicateException, StorageException {
+    public void renameScript(User user, ScriptName oldName, ScriptName newName) throws ScriptNotFoundException, DuplicateException, StorageException {
         transactionRunner.runAndThrowOnException(Throwing.<EntityManager>consumer(entityManager -> {
             Optional<JPASieveScript> sieveScript = findSieveScript(user, oldName, entityManager);
             if (!sieveScript.isPresent()) {
@@ -242,7 +242,7 @@ public class JPASieveRepository implements SieveRepository {
         }).sneakyThrow(), throwStorageException("Unable to rename script " + oldName.getValue() + " for user " + user.asString()));
     }
 
-    private void rollbackTransactionIfActive(final EntityTransaction transaction) {
+    private void rollbackTransactionIfActive(EntityTransaction transaction) {
         if (transaction.isActive()) {
             transaction.rollback();
         }
@@ -262,7 +262,7 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public void setDefaultQuota(final QuotaSize quota) throws StorageException {
+    public void setDefaultQuota(QuotaSize quota) throws StorageException {
         setQuotaForUser(DEFAULT_SIEVE_QUOTA_USERNAME, quota);
     }
 
@@ -272,25 +272,25 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     @Override
-    public boolean hasQuota(final User user) throws StorageException {
+    public boolean hasQuota(User user) throws StorageException {
         Optional<JPASieveQuota> quotaForUser = findQuotaForUser(user.asString());
         return quotaForUser.isPresent();
     }
 
     @Override
-    public QuotaSize getQuota(final User user) throws QuotaNotFoundException, StorageException {
+    public QuotaSize getQuota(User user) throws QuotaNotFoundException, StorageException {
         JPASieveQuota jpaSieveQuota = findQuotaForUser(user.asString())
                 .orElseThrow(() -> new QuotaNotFoundException("Unable to find quota for user " + user.asString()));
         return QuotaSize.size(jpaSieveQuota.getSize());
     }
 
     @Override
-    public void setQuota(final User user, final QuotaSize quota) throws StorageException {
+    public void setQuota(User user, QuotaSize quota) throws StorageException {
         setQuotaForUser(user.asString(), quota);
     }
 
     @Override
-    public void removeQuota(final User user) throws QuotaNotFoundException, StorageException {
+    public void removeQuota(User user) throws QuotaNotFoundException, StorageException {
         removeQuotaForUser(user.asString());
     }
 
@@ -305,7 +305,7 @@ public class JPASieveRepository implements SieveRepository {
         }).sneakyThrow();
     }
 
-    private Optional<JPASieveQuota> findQuotaForUser(final String username, final EntityManager entityManager) {
+    private Optional<JPASieveQuota> findQuotaForUser(String username, EntityManager entityManager) {
         try {
             JPASieveQuota sieveQuota = entityManager.createNamedQuery("findByUsername", JPASieveQuota.class)
                     .setParameter("username", username).getSingleResult();

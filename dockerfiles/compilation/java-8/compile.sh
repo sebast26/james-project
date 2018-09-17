@@ -49,16 +49,10 @@ git checkout $SHA1
 
 # Compilation
 
-export MAVEN_OPTS="-Xmx1024M -Xss128M -XX:MetaspaceSize=512M -XX:MaxMetaspaceSize=1024M -XX:+CMSClassUnloadingEnabled"
-echo "Setting MAVEN_OPTS"
-
-export MVN_ADDITIONAL_ARG_LINE="-pl server/data/data-jpa -am -l mvn.log"
-
 if [ "$SKIPTESTS" = "skipTests" ]; then
    mvn package -DskipTests ${MVN_ADDITIONAL_ARG_LINE}
 else
-   mvn test ${MVN_ADDITIONAL_ARG_LINE}
-   #mvn package ${MVN_ADDITIONAL_ARG_LINE}
+   mvn package ${MVN_ADDITIONAL_ARG_LINE}
 fi
 
 # Retrieve result

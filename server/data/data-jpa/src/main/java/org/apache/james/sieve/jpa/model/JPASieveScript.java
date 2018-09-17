@@ -32,6 +32,7 @@ import javax.persistence.Table;
 
 import org.apache.james.sieverepository.api.ScriptContent;
 import org.apache.james.sieverepository.api.ScriptName;
+import org.apache.james.sieverepository.api.ScriptSummary;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
@@ -47,6 +48,10 @@ public class JPASieveScript {
 
     public static Builder builder(String username, String scriptName) {
         return new Builder(username, scriptName);
+    }
+
+    public static ScriptSummary toSummary(JPASieveScript script) {
+        return new ScriptSummary(new ScriptName(script.getScriptName()), script.isActive());
     }
 
     public static class Builder {
@@ -150,19 +155,19 @@ public class JPASieveScript {
         this.activationDateTime = null;
     }
 
-    public void renameTo(final ScriptName newName) {
+    public void renameTo(ScriptName newName) {
         this.scriptName = newName.getValue();
     }
 
     @Override
-    public boolean equals(final Object o) {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        final JPASieveScript that = (JPASieveScript) o;
+        JPASieveScript that = (JPASieveScript) o;
         return Objects.equals(uuid, that.uuid);
     }
 

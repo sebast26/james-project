@@ -76,32 +76,13 @@ public class TransactionRunner {
         }
     }
 
-    public <E extends Throwable> void runAndThrowOnException(final Consumer<EntityManager> runner,
-                                                             final Function<PersistenceException, E> exceptionTranslator) throws E {
+    public <T> void runAndThrowOnException(Consumer<EntityManager> runnable,
+                                           Function<PersistenceException, T> errorHandler) {
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
-            runner.accept(entityManager);
-            transaction.commit();
-        } catch (PersistenceException e) {
-            LOGGER.warn("Could not execute transaction", e);
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-            throw exceptionTranslator.apply(e);
-        } finally {
-            entityManager.close();
-        }
-    }
-
-    public <T> void runAndThrowOnException2(final Consumer<EntityManager> runner,
-                                                              Function<PersistenceException, T> errorHandler) {
-        EntityManager entityManager = entityManagerFactory.createEntityManager();
-        EntityTransaction transaction = entityManager.getTransaction();
-        try {
-            transaction.begin();
-            runner.accept(entityManager);
+            runnable.accept(entityManager);
             transaction.commit();
         } catch (PersistenceException e) {
             LOGGER.warn("Could not execute transaction", e);
@@ -113,5 +94,4 @@ public class TransactionRunner {
             entityManager.close();
         }
     }
-
 }

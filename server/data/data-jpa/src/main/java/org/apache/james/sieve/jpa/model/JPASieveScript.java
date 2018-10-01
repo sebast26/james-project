@@ -109,6 +109,10 @@ public class JPASieveScript {
     @Column(name = "ACTIVATION_DATE_TIME")
     private OffsetDateTime activationDateTime;
 
+    /**
+     * @deprecated enhancement only
+     */
+    @Deprecated
     protected JPASieveScript() {
     }
 

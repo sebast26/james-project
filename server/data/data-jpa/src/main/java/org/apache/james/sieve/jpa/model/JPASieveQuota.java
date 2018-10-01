@@ -46,6 +46,10 @@ public class JPASieveQuota {
     @Column(name = "SIZE", nullable = false)
     private long size;
 
+    /**
+     * @deprecated enhancement only
+     */
+    @Deprecated
     protected JPASieveQuota() {
     }
 

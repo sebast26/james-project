@@ -30,6 +30,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.james.sieverepository.api.ScriptContent;
 import org.apache.james.sieverepository.api.ScriptName;
 import org.apache.james.sieverepository.api.ScriptSummary;
@@ -46,8 +47,8 @@ import com.google.common.base.Preconditions;
 })
 public class JPASieveScript {
 
-    public static Builder builder(String username, String scriptName) {
-        return new Builder(username, scriptName);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static ScriptSummary toSummary(JPASieveScript script) {
@@ -56,18 +57,23 @@ public class JPASieveScript {
 
     public static class Builder {
 
-        private final String username;
-        private final String scriptName;
+        private String username;
+        private String scriptName;
         private String scriptContent;
         private long scriptSize;
         private boolean isActive;
         private OffsetDateTime activationDateTime;
 
-        public Builder(String username, String scriptName) {
+        public Builder username(String username) {
             Preconditions.checkNotNull(username);
-            Preconditions.checkNotNull(scriptName);
             this.username = username;
+            return this;
+        }
+
+        public Builder scriptName(String scriptName) {
+            Preconditions.checkNotNull(scriptName);
             this.scriptName = scriptName;
+            return this;
         }
 
         public Builder scriptContent(ScriptContent scriptContent) {
@@ -79,12 +85,14 @@ public class JPASieveScript {
 
         public Builder isActive(boolean isActive) {
             this.isActive = isActive;
-            this.activationDateTime = isActive ? OffsetDateTime.now() : null;
             return this;
         }
 
         public JPASieveScript build() {
-            return new JPASieveScript(this);
+            Preconditions.checkState(StringUtils.isNotBlank(username), "'username' is mandatory");
+            Preconditions.checkState(StringUtils.isNotBlank(scriptName), "'scriptName' is mandatory");
+            this.activationDateTime = isActive ? OffsetDateTime.now() : null;
+            return new JPASieveScript(username, scriptName, scriptContent, scriptSize, isActive, activationDateTime);
         }
     }
 
@@ -109,16 +117,20 @@ public class JPASieveScript {
     @Column(name = "ACTIVATION_DATE_TIME")
     private OffsetDateTime activationDateTime;
 
+    /**
+     * @deprecated enhancement only
+     */
+    @Deprecated
     protected JPASieveScript() {
     }
 
-    private JPASieveScript(Builder builder) {
-        this.username = builder.username;
-        this.scriptName = builder.scriptName;
-        this.scriptContent = builder.scriptContent;
-        this.scriptSize = builder.scriptSize;
-        this.isActive = builder.isActive;
-        this.activationDateTime = builder.activationDateTime;
+    private JPASieveScript(String username, String scriptName, String scriptContent, long scriptSize, boolean isActive, OffsetDateTime activationDateTime) {
+        this.username = username;
+        this.scriptName = scriptName;
+        this.scriptContent = scriptContent;
+        this.scriptSize = scriptSize;
+        this.isActive = isActive;
+        this.activationDateTime = activationDateTime;
     }
 
     public String getUsername() {

@@ -49,11 +49,15 @@ import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ImmutableList;
 
 public class JPASieveRepository implements SieveRepository {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JPASieveRepository.class);
     private static final String DEFAULT_SIEVE_QUOTA_USERNAME = "default.quota";
 
     private final TransactionRunner transactionRunner;
@@ -70,13 +74,13 @@ public class JPASieveRepository implements SieveRepository {
                 .mapToLong(JPASieveScript::getScriptSize)
                 .sum();
 
-        QuotaSize quota = limitToUse(user);
+        QuotaSize quota = limitToUser(user);
         if (overQuotaAfterModification(usedSpace, size, quota)) {
             throw new QuotaExceededException();
         }
     }
 
-    private QuotaSize limitToUse(User user) throws StorageException {
+    private QuotaSize limitToUser(User user) throws StorageException {
         Optional<JPASieveQuota> userQuota = findQuotaForUser(user.asString());
         if (userQuota.isPresent()) {
             return QuotaSize.size(userQuota.map(JPASieveQuota::getSize));
@@ -91,7 +95,9 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private boolean overQuotaAfterModification(long usedSpace, long size, QuotaSize quota) {
-        return QuotaSize.size(usedSpace).add(size).isGreaterThan(quota);
+        return QuotaSize.size(usedSpace)
+                .add(size)
+                .isGreaterThan(quota);
     }
 
     @Override
@@ -99,7 +105,7 @@ public class JPASieveRepository implements SieveRepository {
         transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 haveSpace(user, name, content.length());
-                JPASieveScript jpaSieveScript = JPASieveScript.builder(user.asString(), name.getValue()).scriptContent(content).build();
+                JPASieveScript jpaSieveScript = JPASieveScript.builder().username(user.asString()).scriptName(name.getValue()).scriptContent(content).build();
                 entityManager.persist(jpaSieveScript);
             } catch (QuotaExceededException | StorageException e) {
                 rollbackTransactionIfActive(entityManager.getTransaction());
@@ -149,6 +155,7 @@ public class JPASieveRepository implements SieveRepository {
                     .setParameter("username", user.asString()).getSingleResult();
             return Optional.ofNullable(activeSieveScript);
         } catch (NoResultException e) {
+            LOGGER.debug("Sieve script not found for user {}", user.asString());
             return Optional.empty();
         }
     }
@@ -200,6 +207,7 @@ public class JPASieveRepository implements SieveRepository {
                     .setParameter("scriptName", scriptName.getValue()).getSingleResult();
             return Optional.ofNullable(sieveScript);
         } catch (NoResultException e) {
+            LOGGER.debug("Sieve script not found for user {}", user.asString());
             return Optional.empty();
         }
     }

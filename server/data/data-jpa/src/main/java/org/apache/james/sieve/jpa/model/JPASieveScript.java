@@ -58,7 +58,6 @@ public class JPASieveScript {
     public static class Builder {
 
         private String username;
-
         private String scriptName;
         private String scriptContent;
         private long scriptSize;

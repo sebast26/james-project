@@ -66,6 +66,10 @@ public class JPASieveQuota {
         this.size = quotaSize.asLong();
     }
 
+    public QuotaSize toQuotaSize() {
+        return QuotaSize.size(size);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

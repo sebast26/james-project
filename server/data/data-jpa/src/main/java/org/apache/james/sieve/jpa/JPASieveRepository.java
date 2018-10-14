@@ -49,6 +49,7 @@ import org.apache.james.sieverepository.api.exception.QuotaExceededException;
 import org.apache.james.sieverepository.api.exception.QuotaNotFoundException;
 import org.apache.james.sieverepository.api.exception.ScriptNotFoundException;
 import org.apache.james.sieverepository.api.exception.StorageException;
+import org.apache.james.util.OptionalUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,17 +82,11 @@ public class JPASieveRepository implements SieveRepository {
     }
 
     private QuotaSize limitToUser(User user) throws StorageException {
-        Optional<JPASieveQuota> userQuota = findQuotaForUser(user.asString());
-        if (userQuota.isPresent()) {
-            return QuotaSize.size(userQuota.map(JPASieveQuota::getSize));
-        }
-
-        Optional<JPASieveQuota> defaultQuota = findQuotaForUser(DEFAULT_SIEVE_QUOTA_USERNAME);
-        if (defaultQuota.isPresent()) {
-            return QuotaSize.size(defaultQuota.map(JPASieveQuota::getSize));
-        } else {
-            return QuotaSize.unlimited();
-        }
+        return OptionalUtils.orSuppliers(
+                Throwing.supplier(() -> findQuotaForUser(user.asString())).sneakyThrow(),
+                Throwing.supplier(() -> findQuotaForUser(DEFAULT_SIEVE_QUOTA_USERNAME)).sneakyThrow())
+                .map(JPASieveQuota::toQuotaSize)
+                .orElse(QuotaSize.unlimited());
     }
 
     private boolean overQuotaAfterModification(long usedSpace, long size, QuotaSize quota) {
@@ -105,7 +100,11 @@ public class JPASieveRepository implements SieveRepository {
         transactionRunner.runAndHandleException(Throwing.<EntityManager>consumer(entityManager -> {
             try {
                 haveSpace(user, name, content.length());
-                JPASieveScript jpaSieveScript = JPASieveScript.builder().username(user.asString()).scriptName(name.getValue()).scriptContent(content).build();
+                JPASieveScript jpaSieveScript = JPASieveScript.builder()
+                        .username(user.asString())
+                        .scriptName(name.getValue())
+                        .scriptContent(content)
+                        .build();
                 entityManager.persist(jpaSieveScript);
             } catch (QuotaExceededException | StorageException e) {
                 rollbackTransactionIfActive(entityManager.getTransaction());
